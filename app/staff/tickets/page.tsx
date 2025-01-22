@@ -1,6 +1,6 @@
-"use server"
+"use client"
 
-import { getTicketsByTenantAction } from "@/actions/db/tickets-actions"
+import { getAllTicketsAction } from "@/actions/db/tickets-actions"
 import { TicketList } from "@/components/tickets/ticket-list"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,24 +10,52 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { auth } from "@clerk/nextjs/server"
+import { SelectTicket } from "@/db/schema"
+import { useAuth } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
-export default async function StaffTicketsPage() {
-  const { userId } = await auth()
+export default function StaffTicketsPage() {
+  const { userId, isLoaded } = useAuth()
+  const router = useRouter()
+  const [tickets, setTickets] = useState<SelectTicket[]>([])
+  const [status, setStatus] = useState("all")
+  const [priority, setPriority] = useState("all")
+  const [isLoading, setIsLoading] = useState(true)
 
-  if (!userId) {
-    return <div>Please sign in to view tickets.</div>
+  useEffect(() => {
+    if (isLoaded && !userId) {
+      router.push("/login")
+      return
+    }
+
+    async function fetchTickets() {
+      setIsLoading(true)
+      const result = await getAllTicketsAction({
+        status: status as any,
+        priority: priority as any
+      })
+      if (result.isSuccess) {
+        setTickets(result.data)
+      }
+      setIsLoading(false)
+    }
+
+    if (userId) {
+      fetchTickets()
+    }
+  }, [isLoaded, userId, status, priority])
+
+  if (!isLoaded || !userId) {
+    return null
   }
-
-  // For now, we'll show all tickets. In a real app, you might want to paginate or filter
-  const result = await getTicketsByTenantAction(userId)
 
   return (
     <div className="container space-y-6 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Maintenance Request Dashboard</h1>
         <div className="flex items-center gap-4">
-          <Select defaultValue="all">
+          <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -41,7 +69,7 @@ export default async function StaffTicketsPage() {
             </SelectContent>
           </Select>
 
-          <Select defaultValue="all">
+          <Select value={priority} onValueChange={setPriority}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by priority" />
             </SelectTrigger>
@@ -56,10 +84,11 @@ export default async function StaffTicketsPage() {
         </div>
       </div>
 
-      <TicketList
-        tickets={result.isSuccess ? result.data : []}
-        baseUrl="/staff/tickets"
-      />
+      {isLoading ? (
+        <div>Loading...</div>
+      ) : (
+        <TicketList tickets={tickets} baseUrl="/staff/tickets" />
+      )}
     </div>
   )
 }

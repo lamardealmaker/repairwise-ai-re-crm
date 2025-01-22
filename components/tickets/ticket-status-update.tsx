@@ -114,7 +114,9 @@ export function TicketStatusUpdate({
     }
   }
 
-  const showResolutionFields = form.watch("status") !== "open"
+  const currentStatus = form.watch("status")
+  const showResolutionFields =
+    currentStatus === "completed" || currentStatus === "closed"
 
   return (
     <Form {...form}>

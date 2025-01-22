@@ -3,7 +3,7 @@
 import { db } from "@/db/db"
 import { InsertTicket, SelectTicket, ticketsTable } from "@/db/schema"
 import { ActionState } from "@/types"
-import { and, eq } from "drizzle-orm"
+import { and, eq, desc } from "drizzle-orm"
 
 export async function createTicketAction(
   ticket: InsertTicket
@@ -160,6 +160,51 @@ export async function deleteTicketAction(id: string): Promise<ActionState<void>>
       message: error instanceof Error 
         ? `Database error: ${error.message}`
         : "Failed to delete ticket" 
+    }
+  }
+}
+
+export async function getAllTicketsAction(
+  filters?: {
+    status?: "open" | "in_progress" | "completed" | "closed" | "completed_by_chat" | "all"
+    priority?: "low" | "medium" | "high" | "critical" | "all"
+  }
+): Promise<ActionState<SelectTicket[]>> {
+  try {
+    console.log("Fetching all tickets with filters:", filters)
+    
+    const conditions = []
+    if (filters?.status && filters.status !== "all") {
+      conditions.push(eq(ticketsTable.status, filters.status))
+    }
+    if (filters?.priority && filters.priority !== "all") {
+      conditions.push(eq(ticketsTable.priority, filters.priority))
+    }
+
+    const tickets = await db
+      .select()
+      .from(ticketsTable)
+      .where(and(...conditions))
+      .orderBy(desc(ticketsTable.createdAt))
+
+    console.log("Successfully fetched tickets:", tickets.length)
+    return {
+      isSuccess: true,
+      message: "Tickets retrieved successfully",
+      data: tickets
+    }
+  } catch (error) {
+    console.error("Error getting tickets:", {
+      error,
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorStack: error instanceof Error ? error.stack : undefined,
+      filters
+    })
+    return { 
+      isSuccess: false, 
+      message: error instanceof Error 
+        ? `Database error: ${error.message}`
+        : "Failed to get tickets" 
     }
   }
 } 
