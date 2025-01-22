@@ -10,7 +10,12 @@ import { SignIn } from "@clerk/nextjs"
 import { dark } from "@clerk/themes"
 import { useTheme } from "next-themes"
 
-export default function LoginPage() {
+type Props = {
+  params: { login: string[] }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export default function LoginPage({ params, searchParams }: Props) {
   const { theme } = useTheme()
 
   return (
