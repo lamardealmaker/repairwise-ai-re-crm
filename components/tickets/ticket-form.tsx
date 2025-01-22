@@ -63,6 +63,11 @@ export function TicketForm({ tenantId, onSuccess }: TicketFormProps) {
   async function onSubmit(data: TicketFormValues) {
     try {
       setIsSubmitting(true)
+      console.log("Starting ticket submission with data:", {
+        ...data,
+        tenantId
+      })
+
       const ticket: InsertTicket = {
         id: crypto.randomUUID(),
         tenantId,
@@ -73,7 +78,9 @@ export function TicketForm({ tenantId, onSuccess }: TicketFormProps) {
         status: "open"
       }
 
+      console.log("Submitting ticket:", ticket)
       const result = await createTicketAction(ticket)
+      console.log("Submission result:", result)
 
       if (result.isSuccess) {
         toast({
@@ -84,17 +91,26 @@ export function TicketForm({ tenantId, onSuccess }: TicketFormProps) {
         onSuccess?.()
         router.refresh()
       } else {
+        console.error("Ticket submission failed:", result)
         toast({
           title: "Error",
-          description: "Failed to submit ticket. Please try again.",
+          description:
+            result.message || "Failed to submit ticket. Please try again.",
           variant: "destructive"
         })
       }
     } catch (error) {
-      console.error("Error submitting ticket:", error)
+      console.error("Error submitting ticket:", {
+        error,
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorStack: error instanceof Error ? error.stack : undefined
+      })
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description:
+          error instanceof Error
+            ? `Error: ${error.message}`
+            : "An unexpected error occurred. Please try again.",
         variant: "destructive"
       })
     } finally {
