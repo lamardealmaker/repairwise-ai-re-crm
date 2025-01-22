@@ -10,13 +10,11 @@ import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-interface TicketPageProps {
-  params: {
-    ticketId: string
-  }
-}
-
-export default async function TicketPage({ params }: TicketPageProps) {
+export default async function TicketPage({
+  params
+}: {
+  params: { ticketId: string }
+}) {
   const { userId } = await auth()
 
   if (!userId) {
