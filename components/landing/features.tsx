@@ -18,7 +18,12 @@ import {
   Database,
   DollarSign,
   LucideIcon,
-  Shield
+  Shield,
+  Bot,
+  Clock,
+  ClipboardCheck,
+  MessageSquare,
+  LineChart
 } from "lucide-react"
 
 interface FeatureProps {
@@ -29,24 +34,28 @@ interface FeatureProps {
 
 const features: FeatureProps[] = [
   {
-    title: "Frontend",
-    description: "Next.js, Tailwind, Shadcn, Framer Motion",
-    icon: AppWindow
+    title: "AI-Powered Triage",
+    description:
+      "Intelligent system automatically prioritizes and routes maintenance requests for faster response times",
+    icon: Bot
   },
   {
-    title: "Backend",
-    description: "Postgres, Supabase, Drizzle ORM, Server Actions",
-    icon: Database
+    title: "Real-Time Updates",
+    description:
+      "Keep tenants informed with automated status updates and estimated completion times",
+    icon: Clock
   },
   {
-    title: "Auth",
-    description: "Clerk",
-    icon: Shield
+    title: "Smart Scheduling",
+    description:
+      "Efficiently coordinate maintenance staff and contractors with automated scheduling",
+    icon: ClipboardCheck
   },
   {
-    title: "Payments",
-    description: "Stripe",
-    icon: DollarSign
+    title: "Instant Communication",
+    description:
+      "Built-in chat system for seamless communication between tenants, staff, and management",
+    icon: MessageSquare
   }
 ]
 
@@ -75,7 +84,12 @@ export const FeaturesSection = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <h2 className="mb-12 text-center text-4xl font-bold">Tech Stack</h2>
+          <h2 className="mb-4 text-center text-4xl font-bold">
+            Streamline Your Property Maintenance
+          </h2>
+          <p className="text-muted-foreground mb-12 text-center text-xl">
+            Powerful features to make property maintenance effortless
+          </p>
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
             {features.map((feature, index) => (
               <FeatureCard key={index} {...feature} />

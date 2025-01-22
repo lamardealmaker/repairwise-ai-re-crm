@@ -25,7 +25,7 @@ const navLinks = [
   { href: "/contact", label: "Contact" }
 ]
 
-const signedInLinks = [{ href: "/todo", label: "Todo" }]
+const signedInLinks = [{ href: "/tenant/tickets", label: "Maintenance" }]
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -55,8 +55,8 @@ export default function Header() {
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between p-4">
         <div className="flex items-center space-x-2 hover:cursor-pointer hover:opacity-80">
           <Rocket className="size-6" />
-          <Link href="/" className="text-xl font-bold">
-            Mckay's App Template
+          <Link href="/" className="flex items-center">
+            <span className="text-lg font-semibold">RepairWise</span>
           </Link>
         </div>
 
