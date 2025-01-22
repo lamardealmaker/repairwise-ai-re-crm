@@ -24,6 +24,7 @@ import { toast } from "@/components/ui/use-toast"
 import { InsertTicket } from "@/db/schema"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -49,6 +50,7 @@ interface TicketFormProps {
 
 export function TicketForm({ tenantId, onSuccess }: TicketFormProps) {
   const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const form = useForm<TicketFormValues>({
     resolver: zodResolver(ticketFormSchema),
     defaultValues: {
@@ -59,32 +61,44 @@ export function TicketForm({ tenantId, onSuccess }: TicketFormProps) {
   })
 
   async function onSubmit(data: TicketFormValues) {
-    const ticket: InsertTicket = {
-      id: crypto.randomUUID(),
-      tenantId,
-      title: data.title,
-      description: data.description,
-      category: data.category,
-      priority: data.priority,
-      status: "open"
-    }
+    try {
+      setIsSubmitting(true)
+      const ticket: InsertTicket = {
+        id: crypto.randomUUID(),
+        tenantId,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        priority: data.priority,
+        status: "open"
+      }
 
-    const result = await createTicketAction(ticket)
+      const result = await createTicketAction(ticket)
 
-    if (result.isSuccess) {
-      toast({
-        title: "Success",
-        description: "Your ticket has been submitted successfully."
-      })
-      form.reset()
-      onSuccess?.()
-      router.refresh()
-    } else {
+      if (result.isSuccess) {
+        toast({
+          title: "Success",
+          description: "Your ticket has been submitted successfully."
+        })
+        form.reset()
+        onSuccess?.()
+        router.refresh()
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit ticket. Please try again.",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error("Error submitting ticket:", error)
       toast({
         title: "Error",
-        description: "Failed to submit ticket. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -186,8 +200,8 @@ export function TicketForm({ tenantId, onSuccess }: TicketFormProps) {
           )}
         />
 
-        <Button type="submit" className="w-full">
-          Submit Ticket
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? "Submitting..." : "Submit Ticket"}
         </Button>
       </form>
     </Form>

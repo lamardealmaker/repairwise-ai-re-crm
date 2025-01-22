@@ -7,6 +7,19 @@ const nextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' https://challenges.cloudflare.com",
+          },
+        ],
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig 
