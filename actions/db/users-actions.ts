@@ -73,4 +73,29 @@ export async function deleteUserAction(id: string): Promise<ActionState<void>> {
     console.error("Error deleting user:", error)
     return { isSuccess: false, message: "Failed to delete user" }
   }
+}
+
+export async function updateUserRoleToStaffAction(
+  clerkId: string
+): Promise<ActionState<SelectUser>> {
+  try {
+    const [updatedUser] = await db
+      .update(usersTable)
+      .set({ role: "staff" })
+      .where(eq(usersTable.clerkId, clerkId))
+      .returning()
+
+    if (!updatedUser) {
+      return { isSuccess: false, message: "User not found" }
+    }
+
+    return {
+      isSuccess: true,
+      message: "User role updated to staff successfully",
+      data: updatedUser
+    }
+  } catch (error) {
+    console.error("Error updating user role:", error)
+    return { isSuccess: false, message: "Failed to update user role" }
+  }
 } 

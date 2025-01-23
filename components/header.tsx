@@ -12,7 +12,8 @@ import {
   SignedOut,
   SignInButton,
   SignUpButton,
-  UserButton
+  UserButton,
+  useUser
 } from "@clerk/nextjs"
 import { Menu, Rocket, X } from "lucide-react"
 import Link from "next/link"
@@ -25,11 +26,18 @@ const navLinks = [
   { href: "/contact", label: "Contact" }
 ]
 
-const signedInLinks = [{ href: "/tenant/tickets", label: "Maintenance" }]
-
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const { user } = useUser()
+  const userRole = user?.publicMetadata?.role as string
+
+  const signedInLinks = [
+    {
+      href: userRole === "staff" ? "/staff/tickets" : "/tenant/tickets",
+      label: "Maintenance"
+    }
+  ]
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -88,17 +96,17 @@ export default function Header() {
           <ThemeSwitcher />
 
           <SignedOut>
-            <SignInButton>
+            <Link href="/login">
               <Button variant="outline">Login</Button>
-            </SignInButton>
+            </Link>
 
-            <SignUpButton>
+            <Link href="/signup">
               <Button className="bg-blue-500 hover:bg-blue-600">Sign Up</Button>
-            </SignUpButton>
+            </Link>
           </SignedOut>
 
           <SignedIn>
-            <UserButton />
+            <UserButton afterSignOutUrl="/" />
           </SignedIn>
 
           <div className="md:hidden">

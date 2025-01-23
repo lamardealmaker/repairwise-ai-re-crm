@@ -19,7 +19,7 @@ import { Providers } from "@/components/utilities/providers"
 import { TailwindIndicator } from "@/components/utilities/tailwind-indicator"
 import { cn } from "@/lib/utils"
 import { ClerkProvider } from "@clerk/nextjs"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { auth, currentUser, clerkClient } from "@clerk/nextjs/server"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -42,6 +42,7 @@ export default async function RootLayout({
   if (userId) {
     // Get user data from Clerk
     const user = await currentUser()
+    const clerk = await clerkClient()
 
     // Check if user exists in our DB
     const userResult = await getUserByClerkIdAction(userId)
@@ -49,17 +50,29 @@ export default async function RootLayout({
     // If user doesn't exist in our DB, create them
     if (!userResult.isSuccess || !userResult.data) {
       if (user) {
-        await createUserAction({
+        const newUser = await createUserAction({
           id: userId,
           clerkId: userId,
           email: user.emailAddresses[0]?.emailAddress || "",
           fullName: `${user.firstName} ${user.lastName}`.trim(),
           role: "tenant"
         })
+
+        // Sync role to Clerk metadata
+        if (newUser.isSuccess) {
+          await clerk.users.updateUser(userId, {
+            publicMetadata: { role: "tenant" }
+          })
+        }
       }
+    } else {
+      // Sync existing user's role to Clerk metadata
+      await clerk.users.updateUser(userId, {
+        publicMetadata: { role: userResult.data.role }
+      })
     }
 
-    // Create profile if it doesn't exist (existing logic)
+    // Create profile if it doesn't exist
     const profileRes = await getProfileByUserIdAction(userId)
     if (!profileRes.isSuccess) {
       await createProfileAction({ userId })

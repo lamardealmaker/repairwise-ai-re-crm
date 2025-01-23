@@ -20,7 +20,7 @@ export default function LoginPage({ params, searchParams }: Props) {
 
   return (
     <SignIn
-      forceRedirectUrl="/tenant/tickets"
+      afterSignInUrl="/auth/redirect"
       appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
     />
   )
