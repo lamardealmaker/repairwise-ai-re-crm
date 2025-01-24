@@ -1,6 +1,6 @@
 /*
 <ai_context>
-Hook for copying text to the clipboard.
+Hook for copying text to the clipboard..
 </ai_context>
 */
 
