@@ -30,7 +30,7 @@ export function OrganizationForm() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showPropertyWizard, setShowPropertyWizard] = useState(false)
-  const [orgId, setOrgId] = useState<string>()
+  const [orgId, setOrgId] = useState<string>("")
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -44,7 +44,8 @@ export function OrganizationForm() {
       setIsLoading(true)
 
       const input: CreateOrganizationInput = {
-        name: data.name
+        name: data.name,
+        role: "ADMIN" // Always create as admin for uninvited users
       }
 
       const result = await createOrganizationAction(input)
@@ -64,7 +65,7 @@ export function OrganizationForm() {
     }
   }
 
-  if (showPropertyWizard && orgId) {
+  if (showPropertyWizard) {
     return <PropertyWizard orgId={orgId} />
   }
 

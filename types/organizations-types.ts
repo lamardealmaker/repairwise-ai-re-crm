@@ -1,4 +1,5 @@
 import { SelectOrganization } from "@/db/schema"
+import { OrgRole } from "./roles-types"
 
 export interface Organization extends SelectOrganization {
   id: string
@@ -9,6 +10,7 @@ export interface Organization extends SelectOrganization {
 
 export interface CreateOrganizationInput {
   name: string
+  role: OrgRole
 }
 
 export interface UpdateOrganizationInput

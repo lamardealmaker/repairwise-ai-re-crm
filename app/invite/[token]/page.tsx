@@ -7,6 +7,7 @@ import {
 import { SignInButton } from "@clerk/nextjs"
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
+import { getUserByClerkIdAction } from "@/actions/db/users-actions"
 
 interface InvitePageProps {
   params: {
@@ -32,21 +33,6 @@ export default async function InvitePage({ params }: InvitePageProps) {
     )
   }
 
-  if (invite.status !== "PENDING") {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="mx-auto max-w-md space-y-4 text-center">
-          <h1 className="text-2xl font-bold">
-            Invite {invite.status.toLowerCase()}
-          </h1>
-          <p className="text-muted-foreground">
-            This invite has already been {invite.status.toLowerCase()}.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   // If user is not logged in, show sign in button
   if (!userId) {
     return (
@@ -66,7 +52,46 @@ export default async function InvitePage({ params }: InvitePageProps) {
     )
   }
 
-  // If user is logged in, accept the invite
+  // Get user's base role to determine redirect
+  const userResult = await getUserByClerkIdAction(userId)
+  if (!userResult.isSuccess || !userResult.data) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="mx-auto max-w-md space-y-4 text-center">
+          <h1 className="text-2xl font-bold">Error</h1>
+          <p className="text-muted-foreground">User not found</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If invite is already accepted, redirect to appropriate dashboard
+  if (invite.status === "ACCEPTED") {
+    if (userResult.data.role === "tenant") {
+      redirect("/tenant/tickets")
+    } else {
+      redirect("/staff/tickets")
+    }
+    return
+  }
+
+  // If invite is not pending, show status
+  if (invite.status !== "PENDING") {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="mx-auto max-w-md space-y-4 text-center">
+          <h1 className="text-2xl font-bold">
+            Invite {invite.status.toLowerCase()}
+          </h1>
+          <p className="text-muted-foreground">
+            This invite has already been {invite.status.toLowerCase()}.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // If user is logged in and invite is pending, accept the invite
   const result = await acceptInviteAction(params.token)
 
   if (!result.isSuccess) {
@@ -80,6 +105,10 @@ export default async function InvitePage({ params }: InvitePageProps) {
     )
   }
 
-  // Redirect to dashboard on success
-  redirect("/dashboard")
+  // Redirect based on user's base role after accepting invite
+  if (userResult.data.role === "tenant") {
+    redirect("/tenant/tickets")
+  } else {
+    redirect("/staff/tickets")
+  }
 }

@@ -23,6 +23,9 @@ import { auth, currentUser, clerkClient } from "@clerk/nextjs/server"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { db } from "@/db/db"
+import { invitesTable, userRolesTable } from "@/db/schema"
+import { and, eq } from "drizzle-orm"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -47,22 +50,72 @@ export default async function RootLayout({
     // Check if user exists in our DB
     const userResult = await getUserByClerkIdAction(userId)
 
+    // Check for pending invites for this email
+    let pendingInvite = null
+    if (user?.emailAddresses[0]?.emailAddress) {
+      const inviteResult = await db
+        .select()
+        .from(invitesTable)
+        .where(
+          and(
+            eq(invitesTable.email, user.emailAddresses[0].emailAddress),
+            eq(invitesTable.status, "PENDING")
+          )
+        )
+        .limit(1)
+
+      if (inviteResult.length > 0) {
+        pendingInvite = inviteResult[0]
+      }
+    }
+
     // If user doesn't exist in our DB, create them
     if (!userResult.isSuccess || !userResult.data) {
       if (user) {
+        const email = user.emailAddresses[0]?.emailAddress || ""
+        const fullName = `${user.firstName} ${user.lastName}`.trim()
+
+        // Create the user
         const newUser = await createUserAction({
           id: userId,
           clerkId: userId,
-          email: user.emailAddresses[0]?.emailAddress || "",
-          fullName: `${user.firstName} ${user.lastName}`.trim(),
-          role: "tenant"
+          email,
+          fullName,
+          // If no invite exists, they're staff. If invited, base role depends on invite role
+          role: pendingInvite
+            ? pendingInvite.role === "TENANT"
+              ? "tenant"
+              : "staff"
+            : "staff"
         })
 
         // Sync role to Clerk metadata
         if (newUser.isSuccess) {
           await clerk.users.updateUser(userId, {
-            publicMetadata: { role: "tenant" }
+            publicMetadata: {
+              role: pendingInvite
+                ? pendingInvite.role === "TENANT"
+                  ? "tenant"
+                  : "staff"
+                : "staff"
+            }
           })
+
+          // If this was an invited user, create their organization role
+          if (pendingInvite) {
+            await db.insert(userRolesTable).values({
+              userId,
+              orgId: pendingInvite.orgId,
+              propertyId: pendingInvite.propertyId,
+              role: pendingInvite.role
+            })
+
+            // Update invite status
+            await db
+              .update(invitesTable)
+              .set({ status: "ACCEPTED" })
+              .where(eq(invitesTable.id, pendingInvite.id))
+          }
         }
       }
     } else {

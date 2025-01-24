@@ -11,6 +11,7 @@ import {
 import { auth } from "@clerk/nextjs/server"
 import { and, eq } from "drizzle-orm"
 import { nanoid } from "nanoid"
+import { sendInviteEmail } from "@/lib/resend"
 
 export async function createInviteAction(
   input: CreateInviteInput
@@ -30,6 +31,21 @@ export async function createInviteAction(
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + (input.expiresInDays || 7))
 
+    // Get organization name for the email
+    const [organization] = await db
+      .select({
+        name: organizationsTable.name
+      })
+      .from(organizationsTable)
+      .where(eq(organizationsTable.id, input.orgId))
+
+    if (!organization) {
+      return {
+        isSuccess: false,
+        message: "Organization not found"
+      }
+    }
+
     const [invite] = await db
       .insert(invitesTable)
       .values({
@@ -43,11 +59,28 @@ export async function createInviteAction(
       })
       .returning()
 
-    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite?token=${token}`
+    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`
+
+    // Send invite email
+    const emailResult = await sendInviteEmail({
+      email: input.email,
+      inviteLink,
+      organizationName: organization.name,
+      role: input.role
+    })
+
+    if (!emailResult.success) {
+      // If email fails, delete the invite and return error
+      await db.delete(invitesTable).where(eq(invitesTable.id, invite.id))
+      return {
+        isSuccess: false,
+        message: "Failed to send invite email"
+      }
+    }
 
     return {
       isSuccess: true,
-      message: "Invite created successfully",
+      message: "Invite sent successfully",
       data: {
         invite: invite as Invite,
         inviteLink

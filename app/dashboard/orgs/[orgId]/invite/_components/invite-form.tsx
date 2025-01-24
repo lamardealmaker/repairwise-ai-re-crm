@@ -25,6 +25,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
+import { Copy, Check } from "lucide-react"
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -41,6 +42,8 @@ interface InviteFormProps {
 export function InviteForm({ orgId }: InviteFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [isCopied, setIsCopied] = useState(false)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -53,6 +56,7 @@ export function InviteForm({ orgId }: InviteFormProps) {
   async function onSubmit(data: FormData) {
     try {
       setIsLoading(true)
+      setInviteLink(null)
 
       const input: CreateInviteInput = {
         email: data.email,
@@ -69,12 +73,25 @@ export function InviteForm({ orgId }: InviteFormProps) {
       }
 
       toast.success(result.message)
+      setInviteLink(result.data.inviteLink)
       form.reset()
       router.refresh()
     } catch (error) {
       toast.error("Something went wrong")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const copyToClipboard = async () => {
+    if (!inviteLink) return
+    try {
+      await navigator.clipboard.writeText(inviteLink)
+      setIsCopied(true)
+      toast.success("Invite link copied to clipboard")
+      setTimeout(() => setIsCopied(false), 2000)
+    } catch (err) {
+      toast.error("Failed to copy invite link")
     }
   }
 
@@ -133,6 +150,26 @@ export function InviteForm({ orgId }: InviteFormProps) {
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Sending..." : "Send Invite"}
           </Button>
+
+          {inviteLink && (
+            <div className="mt-4 space-y-2">
+              <div className="text-sm font-medium">Invite Link:</div>
+              <div className="bg-muted flex items-center gap-2 rounded-md border p-2">
+                <div className="flex-1 truncate text-sm">{inviteLink}</div>
+                <button
+                  type="button"
+                  onClick={copyToClipboard}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {isCopied ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </form>
       </Form>
     </div>

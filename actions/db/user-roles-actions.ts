@@ -8,7 +8,7 @@ import {
   UserRole,
   UserRoleWithDetails
 } from "@/types"
-import { eq } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 
 export async function assignUserRoleAction(
   input: CreateUserRoleInput
@@ -136,5 +136,35 @@ export async function getUserRolesAction(
   } catch (error) {
     console.error("Error getting user roles:", error)
     return { isSuccess: false, message: "Failed to get user roles" }
+  }
+}
+
+export async function getUserOrgIdAction(
+  userId: string
+): Promise<ActionState<string | undefined>> {
+  try {
+    const [userRole] = await db
+      .select({
+        orgId: userRolesTable.orgId
+      })
+      .from(userRolesTable)
+      .where(eq(userRolesTable.userId, userId))
+      .limit(1)
+
+    if (!userRole) {
+      return {
+        isSuccess: false,
+        message: "No organization found for user"
+      }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Organization ID retrieved successfully",
+      data: userRole.orgId
+    }
+  } catch (error) {
+    console.error("Error getting user organization:", error)
+    return { isSuccess: false, message: "Failed to get user organization" }
   }
 } 

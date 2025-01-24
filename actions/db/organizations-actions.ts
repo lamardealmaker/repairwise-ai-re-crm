@@ -28,11 +28,11 @@ export async function createOrganizationAction(
       })
       .returning()
 
-    // Assign the creator as an admin
+    // Assign the creator with the specified role (default to ADMIN for backward compatibility)
     await db.insert(userRolesTable).values({
       userId,
       orgId: organization.id,
-      role: "ADMIN"
+      role: input.role || "ADMIN"
     })
 
     return {
