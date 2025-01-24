@@ -1,28 +1,24 @@
-"use client"
+"use server"
 
+import { auth } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
 import { TicketForm } from "@/components/tickets/ticket-form"
-import { useAuth } from "@clerk/nextjs"
-import { useRouter, usePathname } from "next/navigation"
-import { useEffect } from "react"
+import { getUserOrgIdAction } from "@/actions/db/user-roles-actions"
 
-export default function NewTicketPage() {
-  const { userId, isLoaded } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
+export default async function NewTicketPage() {
+  const { userId } = await auth()
 
-  // Extract orgId from pathname
-  const orgIdMatch = pathname.match(/\/orgs\/([^\/]+)/)
-  const orgId = orgIdMatch ? orgIdMatch[1] : ""
-
-  useEffect(() => {
-    if (isLoaded && !userId) {
-      router.push("/login")
-    }
-  }, [isLoaded, userId, router])
-
-  if (!isLoaded || !userId) {
-    return null
+  if (!userId) {
+    redirect("/login")
   }
+
+  // Get the organization ID for the tenant
+  const orgResult = await getUserOrgIdAction(userId)
+  if (!orgResult.isSuccess || !orgResult.data) {
+    redirect("/dashboard/orgs/create")
+  }
+
+  const orgId = orgResult.data
 
   return (
     <div className="container max-w-2xl space-y-6 py-8">
@@ -34,7 +30,7 @@ export default function NewTicketPage() {
         </p>
       </div>
 
-      <TicketForm orgId={orgId} userRole="TENANT" />
+      <TicketForm orgId={orgId} userRole="TENANT" userId={userId} />
     </div>
   )
 }

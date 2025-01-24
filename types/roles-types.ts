@@ -24,12 +24,18 @@ export interface UpdateUserRoleInput
 }
 
 export interface UserRoleWithDetails extends UserRole {
-  organization: {
+  organization?: {
     id: string
     name: string
   }
   property?: {
     id: string
     name: string
+  } | null
+  user?: {
+    id: string
+    email: string
+    fullName: string | null
+    role: "tenant" | "staff"
   } | null
 }

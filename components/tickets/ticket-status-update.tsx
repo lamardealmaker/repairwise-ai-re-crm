@@ -19,11 +19,12 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { toast } from "@/components/ui/use-toast"
 import { InsertTicket, SelectTicket } from "@/db/schema"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
+import { useState } from "react"
 import { z } from "zod"
 
 const statusUpdateSchema = z.object({
@@ -64,6 +65,8 @@ export function TicketStatusUpdate({
   onSuccess
 }: TicketStatusUpdateProps) {
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+
   const form = useForm<StatusUpdateValues>({
     resolver: zodResolver(statusUpdateSchema),
     defaultValues: {
@@ -75,42 +78,61 @@ export function TicketStatusUpdate({
   })
 
   async function onSubmit(data: StatusUpdateValues) {
-    // If status is being changed to completed/closed, resolution details are required
-    if (
-      (data.status === "completed" || data.status === "closed") &&
-      !data.resolutionDetails
-    ) {
-      form.setError("resolutionDetails", {
-        type: "manual",
-        message:
-          "Resolution details are required when completing or closing a ticket"
-      })
-      return
-    }
+    try {
+      setIsLoading(true)
+      console.log("Form submitted with data:", data)
 
-    const updateData: Partial<InsertTicket> = {
-      status: data.status,
-      resolutionDetails: data.resolutionDetails || null,
-      timeSpent: data.timeSpent || null,
-      costIncurred: data.costIncurred || null,
-      ...(data.status === "closed" ? { closedAt: new Date() } : {})
-    }
+      // If status is being changed to completed/closed, resolution details are required
+      if (
+        (data.status === "completed" || data.status === "closed") &&
+        !data.resolutionDetails
+      ) {
+        console.log("Resolution details required but not provided")
+        form.setError("resolutionDetails", {
+          type: "manual",
+          message:
+            "Resolution details are required when completing or closing a ticket"
+        })
+        setIsLoading(false)
+        return
+      }
 
-    const result = await updateTicketAction(ticket.id, updateData)
+      // Only include resolution fields if status is completed or closed
+      const isResolutionRequired =
+        data.status === "completed" || data.status === "closed"
 
-    if (result.isSuccess) {
-      toast({
-        title: "Success",
-        description: "Ticket status updated successfully."
-      })
-      onSuccess?.()
-      router.refresh()
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to update ticket status. Please try again.",
-        variant: "destructive"
-      })
+      const updateData: Partial<InsertTicket> = {
+        status: data.status,
+        ...(isResolutionRequired
+          ? {
+              resolutionDetails: data.resolutionDetails || null,
+              timeSpent: data.timeSpent || null,
+              costIncurred: data.costIncurred || null
+            }
+          : {
+              resolutionDetails: null,
+              timeSpent: null,
+              costIncurred: null
+            }),
+        ...(data.status === "closed" ? { closedAt: new Date() } : {})
+      }
+
+      console.log("Calling updateTicketAction with:", updateData)
+      const result = await updateTicketAction(ticket.id, updateData)
+      console.log("Update result:", result)
+
+      if (result.isSuccess) {
+        toast.success("Ticket status updated successfully")
+        onSuccess?.()
+        router.refresh()
+      } else {
+        toast.error("Failed to update ticket status. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error updating ticket:", error)
+      toast.error("Something went wrong while updating the ticket")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -127,7 +149,11 @@ export function TicketStatusUpdate({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={isLoading}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -165,6 +191,7 @@ export function TicketStatusUpdate({
                       className="min-h-[100px]"
                       {...field}
                       value={field.value || ""}
+                      disabled={isLoading}
                     />
                   </FormControl>
                   <FormDescription>
@@ -187,6 +214,7 @@ export function TicketStatusUpdate({
                         placeholder="e.g., 2 hours"
                         {...field}
                         value={field.value || ""}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormDescription>
@@ -208,6 +236,7 @@ export function TicketStatusUpdate({
                         placeholder="e.g., $150"
                         {...field}
                         value={field.value || ""}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormDescription>
@@ -221,8 +250,8 @@ export function TicketStatusUpdate({
           </>
         )}
 
-        <Button type="submit" className="w-full">
-          Update Status
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Updating..." : "Update Status"}
         </Button>
       </form>
     </Form>

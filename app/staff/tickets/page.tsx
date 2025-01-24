@@ -40,6 +40,21 @@ export default async function StaffTicketsPage({ searchParams }: Props) {
     return <div>Error: {result.message}</div>
   }
 
-  // Redirect to the organization's tickets page
-  redirect(`/dashboard/orgs/${orgId}/tickets`)
+  return (
+    <div className="container space-y-8 py-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold">Maintenance Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <TicketFilters
+            status={status || "all"}
+            priority={priority || "all"}
+          />
+        </div>
+      </div>
+
+      <div className="min-h-[300px]">
+        <TicketList tickets={result.data} baseUrl="/staff/tickets" />
+      </div>
+    </div>
+  )
 }

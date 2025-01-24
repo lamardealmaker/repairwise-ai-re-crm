@@ -12,24 +12,34 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Organization } from "@/types"
 import { Building, ChevronDown, Plus } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export function OrgSwitcher() {
   const router = useRouter()
+  const pathname = usePathname()
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrg, setSelectedOrg] = useState<Organization>()
   const [isLoading, setIsLoading] = useState(true)
 
+  // Extract orgId from pathname
+  const orgIdMatch = pathname.match(/\/orgs\/([^\/]+)/)
+  const currentOrgId = orgIdMatch ? orgIdMatch[1] : null
+
+  // Load organizations only once on mount
   useEffect(() => {
     async function loadOrganizations() {
       try {
         const { data } = await getUserOrganizationsAction()
         if (data) {
           setOrganizations(data)
-          // Set the first org as selected if none is selected
-          if (!selectedOrg && data.length > 0) {
-            setSelectedOrg(data[0])
+
+          // Only set selected org if we don't have one and have a current org ID
+          if (!selectedOrg && currentOrgId) {
+            const currentOrg = data.find(org => org.id === currentOrgId)
+            if (currentOrg) {
+              setSelectedOrg(currentOrg)
+            }
           }
         }
       } catch (error) {
@@ -40,11 +50,13 @@ export function OrgSwitcher() {
     }
 
     loadOrganizations()
-  }, [selectedOrg])
+  }, []) // Empty dependency array - only run once on mount
 
   function onOrgSelect(org: Organization) {
-    setSelectedOrg(org)
-    router.push(`/dashboard/orgs/${org.id}`)
+    if (org.id !== selectedOrg?.id) {
+      setSelectedOrg(org)
+      router.push(`/dashboard/orgs/${org.id}`)
+    }
   }
 
   function onCreateOrg() {

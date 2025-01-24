@@ -7,11 +7,19 @@ import { redirect } from "next/navigation"
 import { db } from "@/db/db"
 import { userRolesTable } from "@/db/schema/user-roles-schema"
 import { eq } from "drizzle-orm"
+import { getStaffMembersAction } from "@/actions/db/user-roles-actions"
+import { StaffList } from "./_components/staff-list"
+import { Suspense } from "react"
 
 interface Props {
   params: {
     orgId: string
   }
+}
+
+async function StaffListFetcher({ orgId }: { orgId: string }) {
+  const { data: staff = [] } = await getStaffMembersAction(orgId)
+  return <StaffList staff={staff} />
 }
 
 export default async function StaffPage({ params }: Props) {
@@ -58,6 +66,11 @@ export default async function StaffPage({ params }: Props) {
           <p className="text-muted-foreground text-sm">
             Staff members will appear here once they accept their invitations
           </p>
+        </div>
+        <div className="p-4 pt-0">
+          <Suspense fallback={<div>Loading staff...</div>}>
+            <StaffListFetcher orgId={params.orgId} />
+          </Suspense>
         </div>
       </div>
     </div>

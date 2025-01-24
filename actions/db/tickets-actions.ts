@@ -6,6 +6,7 @@ import { ActionState } from "@/types"
 import { and, eq, desc } from "drizzle-orm"
 import { userRolesTable, propertiesTable } from "@/db/schema"
 import { inArray } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
 
 export async function createTicketAction(
   ticket: InsertTicket
@@ -194,6 +195,15 @@ export async function updateTicketAction(
       .returning()
 
     console.log("Successfully updated ticket:", updatedTicket)
+    
+    // Revalidate both staff and tenant ticket paths with the actual ticket ID
+    revalidatePath(`/staff/tickets/${id}`)
+    revalidatePath(`/tenant/tickets/${id}`)
+    
+    // Also revalidate the list views
+    revalidatePath('/staff/tickets')
+    revalidatePath('/tenant/tickets')
+    
     return {
       isSuccess: true,
       message: "Ticket updated successfully",

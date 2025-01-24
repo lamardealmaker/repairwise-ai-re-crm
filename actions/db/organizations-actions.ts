@@ -124,8 +124,9 @@ export async function getUserOrganizationsAction(): Promise<ActionState<Organiza
       }
     }
 
+    // Use distinct selection to prevent duplicates
     const organizations = await db
-      .select({
+      .selectDistinct({
         id: organizationsTable.id,
         name: organizationsTable.name,
         createdAt: organizationsTable.createdAt,
@@ -134,6 +135,7 @@ export async function getUserOrganizationsAction(): Promise<ActionState<Organiza
       .from(organizationsTable)
       .innerJoin(userRolesTable, eq(userRolesTable.orgId, organizationsTable.id))
       .where(eq(userRolesTable.userId, userId))
+      .orderBy(organizationsTable.createdAt)
 
     return {
       isSuccess: true,

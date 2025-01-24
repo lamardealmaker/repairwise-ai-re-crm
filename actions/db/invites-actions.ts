@@ -27,6 +27,14 @@ export async function createInviteAction(
       }
     }
 
+    // Validate property requirement for tenants
+    if (input.role === "TENANT" && !input.propertyId) {
+      return {
+        isSuccess: false,
+        message: "Property is required for tenant invites"
+      }
+    }
+
     const token = nanoid()
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + (input.expiresInDays || 7))

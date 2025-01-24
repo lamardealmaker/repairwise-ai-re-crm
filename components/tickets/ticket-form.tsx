@@ -27,11 +27,11 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import * as z from "zod"
-import { auth } from "@clerk/nextjs/server"
 
 interface TicketFormProps {
   orgId: string
   userRole: "ADMIN" | "EMPLOYEE" | "MAINTENANCE" | "TENANT"
+  userId: string
 }
 
 const ticketFormSchema = z.object({
@@ -52,9 +52,10 @@ const ticketFormSchema = z.object({
 
 type FormData = z.infer<typeof ticketFormSchema>
 
-export function TicketForm({ orgId, userRole }: TicketFormProps) {
+export function TicketForm({ orgId, userRole, userId }: TicketFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true)
   const [properties, setProperties] = useState<UserRoleWithDetails[]>([])
   const isStaff = userRole !== "TENANT"
 
@@ -80,36 +81,51 @@ export function TicketForm({ orgId, userRole }: TicketFormProps) {
   useEffect(() => {
     async function loadProperties() {
       try {
-        const { data } = await getUserRolesAction(orgId)
-        if (data) {
-          const propertyRoles = data
-            .filter(role => role.property)
-            .filter(
-              (role, index, self) =>
-                index === self.findIndex(r => r.propertyId === role.propertyId)
-            )
-          setProperties(propertyRoles)
+        setIsLoadingProperties(true)
+        const { data } = await getUserRolesAction(userId)
 
-          // If tenant, auto-select their property
-          if (userRole === "TENANT" && propertyRoles.length === 1) {
+        if (!data) {
+          toast.error("Failed to load properties")
+          return
+        }
+
+        const propertyRoles = data
+          .filter(role => role.property)
+          .filter(
+            (role, index, self) =>
+              index === self.findIndex(r => r.propertyId === role.propertyId)
+          )
+        setProperties(propertyRoles)
+
+        if (userRole === "TENANT") {
+          if (propertyRoles.length === 0) {
+            toast.error("No property assigned to your account")
+          } else if (propertyRoles.length === 1) {
             form.setValue("propertyId", propertyRoles[0].propertyId!)
           }
         }
       } catch (error) {
         console.error("Error loading properties:", error)
         toast.error("Failed to load properties")
+      } finally {
+        setIsLoadingProperties(false)
       }
     }
 
     loadProperties()
-  }, [orgId, form, userRole])
+  }, [userId, form, userRole])
 
   async function onSubmit(data: z.infer<typeof ticketFormSchema>) {
     try {
-      const authData = await auth()
-      const userId = authData.userId
+      setIsLoading(true)
+
       if (!userId) {
         toast.error("You must be logged in to create a ticket")
+        return
+      }
+
+      if (userRole === "TENANT" && properties.length === 0) {
+        toast.error("No property assigned to your account")
         return
       }
 
@@ -121,16 +137,40 @@ export function TicketForm({ orgId, userRole }: TicketFormProps) {
       }
 
       const result = await createTicketAction(ticket)
+
       if (result.isSuccess) {
         toast.success(result.message)
         form.reset()
+        router.push("/tenant/tickets")
       } else {
         toast.error(result.message)
       }
     } catch (error) {
       console.error("Error creating ticket:", error)
       toast.error("Failed to create ticket")
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  if (isLoadingProperties) {
+    return (
+      <div className="space-y-4 rounded-lg border p-4">
+        <div className="bg-muted h-4 w-1/4 animate-pulse rounded"></div>
+        <div className="bg-muted h-10 animate-pulse rounded"></div>
+      </div>
+    )
+  }
+
+  if (userRole === "TENANT" && properties.length === 0) {
+    return (
+      <div className="rounded-lg border p-4">
+        <p className="text-destructive">
+          No property has been assigned to your account. Please contact your
+          property manager.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -233,39 +273,40 @@ export function TicketForm({ orgId, userRole }: TicketFormProps) {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="propertyId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Property</FormLabel>
-              <Select
-                disabled={
-                  isLoading ||
-                  (userRole === "TENANT" && properties.length === 1)
-                }
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a property" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {properties.map(role => (
-                    <SelectItem key={role.propertyId} value={role.propertyId!}>
-                      {role.property?.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {isStaff && (
+          <FormField
+            control={form.control}
+            name="propertyId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Property</FormLabel>
+                <Select
+                  disabled={isLoading}
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a property" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {properties.map(role => (
+                      <SelectItem
+                        key={role.propertyId}
+                        value={role.propertyId!}
+                      >
+                        {role.property?.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
-        {/* Staff-only fields */}
         {isStaff && (
           <>
             <FormField
@@ -325,7 +366,7 @@ export function TicketForm({ orgId, userRole }: TicketFormProps) {
         )}
 
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Submitting..." : "Submit Ticket"}
+          {isLoading ? "Creating..." : "Create Ticket"}
         </Button>
       </form>
     </Form>

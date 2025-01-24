@@ -1,6 +1,7 @@
 "use client"
 
 import { createInviteAction } from "@/actions/db/invites-actions"
+import { getPropertiesForOrgAction } from "@/actions/db/properties-actions"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -18,20 +19,36 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { CreateInviteInput, OrgRole } from "@/types"
+import { CreateInviteInput, OrgRole, Property } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { Copy, Check } from "lucide-react"
 
-const formSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  role: z.enum(["ADMIN", "EMPLOYEE", "MAINTENANCE", "TENANT"] as const),
-  propertyId: z.string().optional()
-})
+const roleEnum = ["ADMIN", "EMPLOYEE", "MAINTENANCE", "TENANT"] as const
+type RoleType = (typeof roleEnum)[number]
+
+const formSchema = z
+  .object({
+    email: z.string().email("Invalid email address"),
+    role: z.enum(roleEnum),
+    propertyId: z.string().optional()
+  })
+  .refine(
+    data => {
+      if (data.role === "TENANT") {
+        return !!data.propertyId
+      }
+      return true
+    },
+    {
+      message: "Property is required for tenants",
+      path: ["propertyId"]
+    }
+  )
 
 type FormData = z.infer<typeof formSchema>
 
@@ -42,6 +59,8 @@ interface InviteFormProps {
 export function InviteForm({ orgId }: InviteFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingProperties, setIsLoadingProperties] = useState(false)
+  const [properties, setProperties] = useState<Property[]>([])
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
 
@@ -49,21 +68,63 @@ export function InviteForm({ orgId }: InviteFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
-      role: "EMPLOYEE"
+      role: "EMPLOYEE",
+      propertyId: undefined
     }
   })
+
+  const selectedRole = form.watch("role")
+  const isTenantRole = selectedRole === "TENANT"
+
+  // Load properties when form is mounted
+  useEffect(() => {
+    async function loadProperties() {
+      try {
+        setIsLoadingProperties(true)
+        const result = await getPropertiesForOrgAction(orgId)
+        if (result.isSuccess) {
+          setProperties(result.data)
+        } else {
+          toast.error("Failed to load properties")
+        }
+      } catch (error) {
+        console.error("Error loading properties:", error)
+        toast.error("Failed to load properties")
+      } finally {
+        setIsLoadingProperties(false)
+      }
+    }
+
+    loadProperties()
+  }, [orgId])
+
+  // Reset propertyId when role changes
+  useEffect(() => {
+    if (!isTenantRole) {
+      form.setValue("propertyId", undefined)
+    }
+  }, [isTenantRole, form])
 
   async function onSubmit(data: FormData) {
     try {
       setIsLoading(true)
       setInviteLink(null)
 
-      const input: CreateInviteInput = {
-        email: data.email,
-        orgId,
-        propertyId: data.propertyId,
-        role: data.role as OrgRole
-      }
+      // Create the correct invite input based on role
+      const input: CreateInviteInput =
+        data.role === "TENANT"
+          ? {
+              email: data.email,
+              orgId,
+              role: "TENANT",
+              propertyId: data.propertyId! // We know this exists due to form validation
+            }
+          : {
+              email: data.email,
+              orgId,
+              role: data.role as Exclude<OrgRole, "TENANT">,
+              propertyId: data.propertyId // Optional for non-tenant roles
+            }
 
       const result = await createInviteAction(input)
 
@@ -147,7 +208,48 @@ export function InviteForm({ orgId }: InviteFormProps) {
             )}
           />
 
-          <Button type="submit" disabled={isLoading}>
+          {/* Show property selection only for tenant role */}
+          {isTenantRole && (
+            <FormField
+              control={form.control}
+              name="propertyId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Property</FormLabel>
+                  <Select
+                    disabled={isLoading || isLoadingProperties}
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isLoadingProperties
+                              ? "Loading properties..."
+                              : "Select a property"
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {properties.map(property => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          <Button
+            type="submit"
+            disabled={isLoading || (isTenantRole && isLoadingProperties)}
+          >
             {isLoading ? "Sending..." : "Send Invite"}
           </Button>
 

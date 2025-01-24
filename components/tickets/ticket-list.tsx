@@ -35,17 +35,17 @@ export function TicketList({ tickets, baseUrl }: TicketListProps) {
   function getStatusColor(status: string) {
     switch (status) {
       case "open":
-        return "bg-blue-500"
+        return "bg-blue-500/80"
       case "in_progress":
-        return "bg-yellow-500"
+        return "bg-yellow-500/80"
       case "completed":
-        return "bg-green-500"
+        return "bg-emerald-500/80"
       case "completed_by_chat":
-        return "bg-purple-500"
+        return "bg-secondary"
       case "closed":
-        return "bg-gray-500"
+        return "bg-gray-400/80"
       default:
-        return "bg-gray-500"
+        return "bg-gray-400/80"
     }
   }
 

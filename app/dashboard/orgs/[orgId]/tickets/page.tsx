@@ -46,10 +46,7 @@ export default async function TicketsPage({ params }: Props) {
         </Button>
       </div>
 
-      <TicketList
-        tickets={result.data}
-        baseUrl={`/dashboard/orgs/${params.orgId}/tickets`}
-      />
+      <TicketList tickets={result.data} baseUrl="/staff/tickets" />
     </div>
   )
 }

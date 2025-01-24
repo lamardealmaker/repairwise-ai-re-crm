@@ -16,13 +16,27 @@ export interface Invite extends SelectInvite {
   createdAt: Date
 }
 
-export interface CreateInviteInput {
+// Base invite input without role-specific requirements
+interface BaseInviteInput {
   email: string
   orgId: string
-  propertyId?: string
-  role: OrgRole
-  expiresInDays?: number // Optional, defaults to 7 in the action
+  expiresInDays?: number
 }
+
+// Tenant invite requires propertyId
+interface TenantInviteInput extends BaseInviteInput {
+  role: "TENANT"
+  propertyId: string
+}
+
+// Other roles make propertyId optional
+interface OtherRoleInviteInput extends BaseInviteInput {
+  role: Exclude<OrgRole, "TENANT">
+  propertyId?: string
+}
+
+// Union type for all invite inputs
+export type CreateInviteInput = TenantInviteInput | OtherRoleInviteInput
 
 export interface UpdateInviteInput {
   id: string

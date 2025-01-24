@@ -19,17 +19,13 @@ export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
   const { setTheme, theme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
+  // Only show after mount to prevent hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) {
-    return null
-  }
-
-  const handleChange = (theme: "dark" | "light") => {
-    localStorage.setItem("theme", theme)
-    setTheme(theme)
+    return <div className={cn("p-1", props.className)} />
   }
 
   return (
@@ -38,7 +34,7 @@ export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
         "p-1 hover:cursor-pointer hover:opacity-50",
         props.className
       )}
-      onClick={() => handleChange(theme === "light" ? "dark" : "light")}
+      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
     >
       {theme === "dark" ? (
         <Moon className="size-6" />

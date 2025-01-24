@@ -22,3 +22,6 @@ AI-powered apartment maintenance and repair management system. Streamline tenant
 
 
 # repairwise-ai-re-crm
+
+built on McKay Wrigley's nextjs starter
+

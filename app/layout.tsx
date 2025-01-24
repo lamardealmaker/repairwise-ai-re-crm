@@ -13,8 +13,6 @@ import {
   getUserByClerkIdAction
 } from "@/actions/db/users-actions"
 import { Toaster } from "@/components/ui/toaster"
-import { PostHogPageview } from "@/components/utilities/posthog/posthog-pageview"
-import { PostHogUserIdentify } from "@/components/utilities/posthog/posthog-user-identity"
 import { Providers } from "@/components/utilities/providers"
 import { TailwindIndicator } from "@/components/utilities/tailwind-indicator"
 import { cn } from "@/lib/utils"
@@ -134,26 +132,16 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en">
         <body
           className={cn(
             "bg-background mx-auto min-h-screen w-full scroll-smooth antialiased",
             inter.className
           )}
         >
-          <Providers
-            attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
-            disableTransitionOnChange
-          >
-            <PostHogUserIdentify />
-            <PostHogPageview />
-
+          <Providers>
             {children}
-
             <TailwindIndicator />
-
             <Toaster />
           </Providers>
         </body>
