@@ -1,18 +1,30 @@
 "use server"
 
-import { getTicketsByTenantAction } from "@/actions/db/tickets-actions"
+import { getTicketsForUserAction } from "@/actions/db/tickets-actions"
 import { auth } from "@clerk/nextjs/server"
 import { NewTicketButton } from "./_components/button-wrapper"
 import { TicketListWrapper } from "./_components/ticket-list-wrapper"
+import { redirect } from "next/navigation"
 
-export default async function TenantTicketsPage() {
+interface Props {
+  params: { orgId: string }
+}
+
+export default async function TenantTicketsPage({ params }: Props) {
   const { userId } = await auth()
 
   if (!userId) {
     return <div>Please sign in to view your tickets.</div>
   }
 
-  const result = await getTicketsByTenantAction(userId)
+  const result = await getTicketsForUserAction(userId, params.orgId)
+
+  if (!result.isSuccess) {
+    if (result.message === "No roles found for this organization") {
+      redirect("/dashboard/orgs/create")
+    }
+    return <div>Error: {result.message}</div>
+  }
 
   return (
     <div className="container space-y-6 py-8">
@@ -21,7 +33,7 @@ export default async function TenantTicketsPage() {
         <NewTicketButton />
       </div>
 
-      <TicketListWrapper tickets={result.isSuccess ? result.data : []} />
+      <TicketListWrapper tickets={result.data} />
     </div>
   )
 }

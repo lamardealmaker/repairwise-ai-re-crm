@@ -11,7 +11,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 type Props = {
-  params: { ticketId: string }
+  params: { ticketId: string; orgId: string }
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
@@ -22,6 +22,7 @@ export default async function StaffTicketPage({ params, searchParams }: Props) {
     return <div>Please sign in to view this ticket.</div>
   }
 
+  // Get ticket with role-based access check
   const ticketResult = await getTicketByIdAction(params.ticketId)
   const messagesResult = await getTicketMessagesAction(params.ticketId)
 
@@ -67,7 +68,7 @@ export default async function StaffTicketPage({ params, searchParams }: Props) {
         <div>
           <div className="mb-1 flex items-center gap-2">
             <Link
-              href="/staff/tickets"
+              href={`/staff/tickets`}
               className="text-muted-foreground text-sm hover:underline"
             >
               ← Back to maintenance dashboard
@@ -91,6 +92,8 @@ export default async function StaffTicketPage({ params, searchParams }: Props) {
             </span>
           </div>
         </div>
+
+        <TicketStatusUpdate ticket={ticket} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -121,7 +124,7 @@ export default async function StaffTicketPage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div>
           <div className="bg-muted space-y-4 rounded-lg p-4">
             <h3 className="font-semibold">Maintenance Details</h3>
             <div>
@@ -130,11 +133,6 @@ export default async function StaffTicketPage({ params, searchParams }: Props) {
                 {ticket.category.replace(/_/g, " ")}
               </div>
             </div>
-          </div>
-
-          <div className="bg-muted space-y-4 rounded-lg p-4">
-            <h3 className="font-semibold">Update Maintenance Status</h3>
-            <TicketStatusUpdate ticket={ticket} />
           </div>
         </div>
       </div>

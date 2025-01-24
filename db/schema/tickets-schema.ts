@@ -1,5 +1,19 @@
-import { jsonb, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+/*
+<ai_context>
+Defines the database schema for tickets.
+</ai_context>
+*/
+
+import {
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid
+} from "drizzle-orm/pg-core"
 import { usersTable } from "./users-schema"
+import { propertiesTable } from "./properties-schema"
 
 export const ticketStatusEnum = pgEnum("ticket_status", [
   "open",
@@ -27,6 +41,9 @@ export const ticketsTable = pgTable("tickets", {
   id: text("id").primaryKey().notNull(),
   tenantId: text("tenant_id")
     .references(() => usersTable.id, { onDelete: "cascade" })
+    .notNull(),
+  propertyId: uuid("property_id")
+    .references(() => propertiesTable.id, { onDelete: "cascade" })
     .notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),

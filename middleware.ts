@@ -4,25 +4,49 @@ Contains middleware for protecting routes, checking user authentication, and red
 </ai_context>
 */
 
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
+import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
-const isProtectedRoute = createRouteMatcher(["/tenant/(.*)", "/staff/(.*)"])
+// Define protected route patterns
+const STAFF_ROUTES = ["/staff/(.*)"]
+const TENANT_ROUTES = ["/tenant/(.*)"]
+const DASHBOARD_ROUTES = ["/dashboard/(.*)"]
 
-export default clerkMiddleware(async (auth, req) => {
-  const { userId, redirectToSignIn } = await auth()
+// Helper to check if URL matches any patterns
+const matchesPatterns = (url: string, patterns: string[]) =>
+  patterns.some(pattern => new RegExp(`^${pattern}$`).test(url))
 
-  // If the user isn't signed in and the route is private, redirect to sign-in
-  if (!userId && isProtectedRoute(req)) {
-    return redirectToSignIn({ returnBackUrl: "/login" })
-  }
+export default clerkMiddleware(async (auth, req: NextRequest) => {
+  const { userId } = await auth()
+  const pathname = req.nextUrl.pathname
 
-  // If the user is logged in and the route is protected, let them view.
-  if (userId && isProtectedRoute(req)) {
+  // Public routes are accessible to everyone
+  if (
+    pathname.includes("_next") ||
+    pathname.includes("assets") ||
+    pathname.includes("api") ||
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/auth/redirect"
+  ) {
     return NextResponse.next()
   }
+
+  // Require authentication for protected routes
+  if (!userId) {
+    if (
+      matchesPatterns(pathname, [...STAFF_ROUTES, ...TENANT_ROUTES, ...DASHBOARD_ROUTES])
+    ) {
+      return NextResponse.redirect(new URL("/login", req.url))
+    }
+    return NextResponse.next()
+  }
+
+  return NextResponse.next()
 })
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"]
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"]
 }

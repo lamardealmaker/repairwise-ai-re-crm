@@ -1,17 +1,16 @@
-"use server" //d
+"use server"
 
 import { getTicketByIdAction } from "@/actions/db/tickets-actions"
 import { getTicketMessagesAction } from "@/actions/db/ticket-messages-actions"
 import { TicketMessageThread } from "@/components/tickets/ticket-message-thread"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { auth } from "@clerk/nextjs/server"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
 type Props = {
-  params: { ticketId: string }
+  params: { ticketId: string; orgId: string }
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
@@ -22,7 +21,8 @@ export default async function TicketPage({ params, searchParams }: Props) {
     return <div>Please sign in to view this ticket.</div>
   }
 
-  const ticketResult = await getTicketByIdAction(params.ticketId, userId)
+  // Get ticket with role-based access check
+  const ticketResult = await getTicketByIdAction(params.ticketId)
   const messagesResult = await getTicketMessagesAction(params.ticketId)
 
   if (!ticketResult.isSuccess || !ticketResult.data) {
@@ -67,7 +67,7 @@ export default async function TicketPage({ params, searchParams }: Props) {
         <div>
           <div className="mb-1 flex items-center gap-2">
             <Link
-              href="/tenant/tickets"
+              href={`/tenant/tickets`}
               className="text-muted-foreground text-sm hover:underline"
             >
               ← Back to maintenance requests
@@ -93,45 +93,16 @@ export default async function TicketPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div className="space-y-6 md:col-span-2">
-          <div className="prose max-w-none">
-            <h3>Issue Description</h3>
-            <p>{ticket.description}</p>
-          </div>
-
-          {ticket.resolutionDetails && (
-            <div className="prose max-w-none">
-              <h3>Resolution Details</h3>
-              <p>{ticket.resolutionDetails}</p>
-              {ticket.timeSpent && <p>Time to complete: {ticket.timeSpent}</p>}
-              {ticket.costIncurred && <p>Repair cost: {ticket.costIncurred}</p>}
-            </div>
-          )}
-
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">
-              Communication History
-            </h3>
-            <TicketMessageThread
-              ticketId={ticket.id}
-              messages={messagesResult.isSuccess ? messagesResult.data : []}
-              currentUserId={userId}
-            />
-          </div>
+      <div className="space-y-4">
+        <div className="prose max-w-none">
+          <p>{ticket.description}</p>
         </div>
 
-        <div>
-          <div className="bg-muted space-y-4 rounded-lg p-4">
-            <h3 className="font-semibold">Maintenance Details</h3>
-            <div>
-              <div className="text-muted-foreground text-sm">Type of Issue</div>
-              <div className="capitalize">
-                {ticket.category.replace(/_/g, " ")}
-              </div>
-            </div>
-          </div>
-        </div>
+        <TicketMessageThread
+          ticketId={ticket.id}
+          messages={messagesResult.isSuccess ? messagesResult.data : []}
+          currentUserId={userId}
+        />
       </div>
     </div>
   )

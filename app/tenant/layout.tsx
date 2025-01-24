@@ -36,7 +36,7 @@ export default async function TenantLayout({
 
   return (
     <div className="min-h-screen">
-      <DashboardHeader userRole="tenant" />
+      <DashboardHeader />
       <main>{children}</main>
     </div>
   )

@@ -9,8 +9,13 @@ import {
   ticketMessagesTable,
   ticketsTable,
   todosTable,
-  usersTable
+  usersTable,
+  organizationsTable,
+  propertiesTable,
+  userRolesTable,
+  invitesTable
 } from "@/db/schema"
+import { relations } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 
@@ -31,12 +36,47 @@ const client = postgres(connectionString, {
   ssl: process.env.NODE_ENV === "production"
 })
 
+// Define relations
+export const userRolesRelations = relations(userRolesTable, ({ one }) => ({
+  user: one(usersTable, {
+    fields: [userRolesTable.userId],
+    references: [usersTable.id]
+  }),
+  organization: one(organizationsTable, {
+    fields: [userRolesTable.orgId],
+    references: [organizationsTable.id]
+  }),
+  property: one(propertiesTable, {
+    fields: [userRolesTable.propertyId],
+    references: [propertiesTable.id]
+  })
+}))
+
+export const invitesRelations = relations(invitesTable, ({ one }) => ({
+  organization: one(organizationsTable, {
+    fields: [invitesTable.orgId],
+    references: [organizationsTable.id]
+  }),
+  property: one(propertiesTable, {
+    fields: [invitesTable.propertyId],
+    references: [propertiesTable.id]
+  }),
+  invitedBy: one(usersTable, {
+    fields: [invitesTable.invitedByUserId],
+    references: [usersTable.id]
+  })
+}))
+
 const schema = {
   profiles: profilesTable,
   todos: todosTable,
   users: usersTable,
   tickets: ticketsTable,
-  ticketMessages: ticketMessagesTable
+  ticketMessages: ticketMessagesTable,
+  organizations: organizationsTable,
+  properties: propertiesTable,
+  userRoles: userRolesTable,
+  invites: invitesTable
 }
 
 export const db = drizzle(client, { schema })

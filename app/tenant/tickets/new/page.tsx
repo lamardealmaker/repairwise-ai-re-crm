@@ -2,12 +2,17 @@
 
 import { TicketForm } from "@/components/tickets/ticket-form"
 import { useAuth } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 
 export default function NewTicketPage() {
   const { userId, isLoaded } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Extract orgId from pathname
+  const orgIdMatch = pathname.match(/\/orgs\/([^\/]+)/)
+  const orgId = orgIdMatch ? orgIdMatch[1] : ""
 
   useEffect(() => {
     if (isLoaded && !userId) {
@@ -29,12 +34,7 @@ export default function NewTicketPage() {
         </p>
       </div>
 
-      <TicketForm
-        tenantId={userId}
-        onSuccess={() => {
-          router.push("/tenant/tickets")
-        }}
-      />
+      <TicketForm orgId={orgId} userRole="TENANT" />
     </div>
   )
 }

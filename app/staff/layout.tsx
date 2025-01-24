@@ -37,7 +37,7 @@ export default async function StaffLayout({
 
   return (
     <div className="min-h-screen">
-      <DashboardHeader userRole="staff" />
+      <DashboardHeader />
       <main>{children}</main>
     </div>
   )
