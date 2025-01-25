@@ -2,9 +2,7 @@
 
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
-
 import { cn } from "@/lib/utils"
-
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
@@ -16,13 +14,16 @@ const Progress = React.forwardRef<
       className
     )}
     {...props}
+    data-oid="u7pmgj4"
   >
     <ProgressPrimitive.Indicator
       className="bg-primary size-full flex-1 transition-all"
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      style={{
+        transform: `translateX(-${100 - (value || 0)}%)`
+      }}
+      data-oid="guljvzz"
     />
   </ProgressPrimitive.Root>
 ))
 Progress.displayName = ProgressPrimitive.Root.displayName
-
 export { Progress }

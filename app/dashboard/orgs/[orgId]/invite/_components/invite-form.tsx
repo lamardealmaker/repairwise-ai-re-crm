@@ -27,10 +27,8 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { Copy, Check } from "lucide-react"
-
 const roleEnum = ["ADMIN", "EMPLOYEE", "MAINTENANCE", "TENANT"] as const
 type RoleType = (typeof roleEnum)[number]
-
 const formSchema = z
   .object({
     email: z.string().email("Invalid email address"),
@@ -49,13 +47,10 @@ const formSchema = z
       path: ["propertyId"]
     }
   )
-
 type FormData = z.infer<typeof formSchema>
-
 interface InviteFormProps {
   orgId: string
 }
-
 export function InviteForm({ orgId }: InviteFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -63,7 +58,6 @@ export function InviteForm({ orgId }: InviteFormProps) {
   const [properties, setProperties] = useState<Property[]>([])
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
-
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,7 +66,6 @@ export function InviteForm({ orgId }: InviteFormProps) {
       propertyId: undefined
     }
   })
-
   const selectedRole = form.watch("role")
   const isTenantRole = selectedRole === "TENANT"
 
@@ -94,7 +87,6 @@ export function InviteForm({ orgId }: InviteFormProps) {
         setIsLoadingProperties(false)
       }
     }
-
     loadProperties()
   }, [orgId])
 
@@ -104,7 +96,6 @@ export function InviteForm({ orgId }: InviteFormProps) {
       form.setValue("propertyId", undefined)
     }
   }, [isTenantRole, form])
-
   async function onSubmit(data: FormData) {
     try {
       setIsLoading(true)
@@ -125,14 +116,11 @@ export function InviteForm({ orgId }: InviteFormProps) {
               role: data.role as Exclude<OrgRole, "TENANT">,
               propertyId: data.propertyId // Optional for non-tenant roles
             }
-
       const result = await createInviteAction(input)
-
       if (!result.isSuccess) {
         toast.error(result.message)
         return
       }
-
       toast.success(result.message)
       setInviteLink(result.data.inviteLink)
       form.reset()
@@ -143,7 +131,6 @@ export function InviteForm({ orgId }: InviteFormProps) {
       setIsLoading(false)
     }
   }
-
   const copyToClipboard = async () => {
     if (!inviteLink) return
     try {
@@ -155,57 +142,77 @@ export function InviteForm({ orgId }: InviteFormProps) {
       toast.error("Failed to copy invite link")
     }
   }
-
   return (
-    <div className="rounded-lg border p-4">
-      <h2 className="mb-4 font-semibold">Invite User</h2>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <div className="rounded-lg border p-4" data-oid="2l7zt.1">
+      <h2 className="mb-4 font-semibold" data-oid="ljdaq-u">
+        Invite User
+      </h2>
+      <Form {...form} data-oid="caj.u-q">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4"
+          data-oid="kv:5.ws"
+        >
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
+              <FormItem data-oid="3p6jb5k">
+                <FormLabel data-oid=".gtzs6u">Email</FormLabel>
+                <FormControl data-oid="hz-sk0_">
                   <Input
                     {...field}
                     type="email"
                     disabled={isLoading}
                     placeholder="Enter email address"
+                    data-oid="fm2zql4"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage data-oid="-dap5m." />
               </FormItem>
             )}
+            data-oid="julp05s"
           />
 
           <FormField
             control={form.control}
             name="role"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Role</FormLabel>
+              <FormItem data-oid="um:dz05">
+                <FormLabel data-oid="2-xz3ui">Role</FormLabel>
                 <Select
                   disabled={isLoading}
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  data-oid="t6-8ryx"
                 >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
+                  <FormControl data-oid="2v68as2">
+                    <SelectTrigger data-oid="l1lca59">
+                      <SelectValue
+                        placeholder="Select a role"
+                        data-oid="hkj3lcv"
+                      />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="EMPLOYEE">Employee</SelectItem>
-                    <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                    <SelectItem value="TENANT">Tenant</SelectItem>
+                  <SelectContent data-oid="w-dypu-">
+                    <SelectItem value="ADMIN" data-oid="w7oym0n">
+                      Admin
+                    </SelectItem>
+                    <SelectItem value="EMPLOYEE" data-oid="-ugvhe7">
+                      Employee
+                    </SelectItem>
+                    <SelectItem value="MAINTENANCE" data-oid="g0gy221">
+                      Maintenance
+                    </SelectItem>
+                    <SelectItem value="TENANT" data-oid="raphhpa">
+                      Tenant
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
+                <FormMessage data-oid="bonx4la" />
               </FormItem>
             )}
+            data-oid="z04hlez"
           />
 
           {/* Show property selection only for tenant role */}
@@ -214,59 +221,75 @@ export function InviteForm({ orgId }: InviteFormProps) {
               control={form.control}
               name="propertyId"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Property</FormLabel>
+                <FormItem data-oid="o7hlwg-">
+                  <FormLabel data-oid="pq9ckqg">Property</FormLabel>
                   <Select
                     disabled={isLoading || isLoadingProperties}
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    data-oid="ehae-ro"
                   >
-                    <FormControl>
-                      <SelectTrigger>
+                    <FormControl data-oid="hi3hc2u">
+                      <SelectTrigger data-oid="wfk92xv">
                         <SelectValue
                           placeholder={
                             isLoadingProperties
                               ? "Loading properties..."
                               : "Select a property"
                           }
+                          data-oid="ui0d:p3"
                         />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent data-oid="4z.cn9d">
                       {properties.map(property => (
-                        <SelectItem key={property.id} value={property.id}>
+                        <SelectItem
+                          key={property.id}
+                          value={property.id}
+                          data-oid="njoy:f4"
+                        >
                           {property.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage data-oid="ma7g7dh" />
                 </FormItem>
               )}
+              data-oid="-moomgc"
             />
           )}
 
           <Button
             type="submit"
             disabled={isLoading || (isTenantRole && isLoadingProperties)}
+            data-oid="c09nqm:"
           >
             {isLoading ? "Sending..." : "Send Invite"}
           </Button>
 
           {inviteLink && (
-            <div className="mt-4 space-y-2">
-              <div className="text-sm font-medium">Invite Link:</div>
-              <div className="bg-muted flex items-center gap-2 rounded-md border p-2">
-                <div className="flex-1 truncate text-sm">{inviteLink}</div>
+            <div className="mt-4 space-y-2" data-oid="uu0wd51">
+              <div className="text-sm font-medium" data-oid="xyofh1i">
+                Invite Link:
+              </div>
+              <div
+                className="bg-muted flex items-center gap-2 rounded-md border p-2"
+                data-oid=".uuzsuo"
+              >
+                <div className="flex-1 truncate text-sm" data-oid="zrxf:oy">
+                  {inviteLink}
+                </div>
                 <button
                   type="button"
                   onClick={copyToClipboard}
                   className="text-muted-foreground hover:text-foreground"
+                  data-oid="x3663vl"
                 >
                   {isCopied ? (
-                    <Check className="size-4" />
+                    <Check className="size-4" data-oid=".5ape_v" />
                   ) : (
-                    <Copy className="size-4" />
+                    <Copy className="size-4" data-oid="9jlzg28" />
                   )}
                 </button>
               </div>

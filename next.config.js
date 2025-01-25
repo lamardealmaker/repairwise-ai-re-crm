@@ -5,7 +5,7 @@ const nextConfig = {
     // Dangerously allow production builds to successfully complete even if
     // your project has type errors.
     // !! WARN !!
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true
   },
   async headers() {
     return [
@@ -14,12 +14,12 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://challenges.cloudflare.com",
-          },
-        ],
-      },
+            value: "frame-ancestors 'self' https://challenges.cloudflare.com"
+          }
+        ]
+      }
     ]
-  },
+  }
 }
 
 module.exports = nextConfig 

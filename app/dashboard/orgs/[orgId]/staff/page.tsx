@@ -10,23 +10,19 @@ import { eq } from "drizzle-orm"
 import { getStaffMembersAction } from "@/actions/db/user-roles-actions"
 import { StaffList } from "./_components/staff-list"
 import { Suspense } from "react"
-
 interface Props {
   params: {
     orgId: string
   }
 }
-
 async function StaffListFetcher({ orgId }: { orgId: string }) {
   const { data: staff = [] } = await getStaffMembersAction(orgId)
-  return <StaffList staff={staff} />
+  return <StaffList staff={staff} data-oid="l4j7xcp" />
 }
-
 export default async function StaffPage({ params }: Props) {
   const { userId } = await auth()
-
   if (!userId) {
-    return <div>Please sign in to view staff.</div>
+    return <div data-oid="4mv4:-p">Please sign in to view staff.</div>
   }
 
   // Check if user is admin
@@ -38,38 +34,46 @@ export default async function StaffPage({ params }: Props) {
     .from(userRolesTable)
     .where(eq(userRolesTable.userId, userId))
     .limit(1)
-
   if (!userRole || userRole.role !== "ADMIN") {
     redirect(`/dashboard/orgs/${params.orgId}`)
   }
-
   return (
-    <div className="container mx-auto space-y-8 py-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Staff Management</h1>
-          <p className="text-muted-foreground">
+    <div className="container mx-auto space-y-8 py-6" data-oid="580ykyi">
+      <div className="flex items-center justify-between" data-oid="x0uy179">
+        <div data-oid="0zbu6mx">
+          <h1 className="text-2xl font-bold" data-oid="ax.mpbd">
+            Staff Management
+          </h1>
+          <p className="text-muted-foreground" data-oid="45gk3me">
             Manage staff members and their roles
           </p>
         </div>
 
-        <Button asChild>
-          <Link href={`/dashboard/orgs/${params.orgId}/staff/invite`}>
+        <Button asChild data-oid="6ep5::g">
+          <Link
+            href={`/dashboard/orgs/${params.orgId}/staff/invite`}
+            data-oid="7m:my20"
+          >
             Invite Staff
           </Link>
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <div className="p-4">
-          <h2 className="font-semibold">Current Staff</h2>
-          <p className="text-muted-foreground text-sm">
+      <div className="rounded-md border" data-oid="m28b7i-">
+        <div className="p-4" data-oid="9p1iwyv">
+          <h2 className="font-semibold" data-oid="x3cqh_i">
+            Current Staff
+          </h2>
+          <p className="text-muted-foreground text-sm" data-oid="yqpejx6">
             Staff members will appear here once they accept their invitations
           </p>
         </div>
-        <div className="p-4 pt-0">
-          <Suspense fallback={<div>Loading staff...</div>}>
-            <StaffListFetcher orgId={params.orgId} />
+        <div className="p-4 pt-0" data-oid="n.pn3oi">
+          <Suspense
+            fallback={<div data-oid="lqbd58p">Loading staff...</div>}
+            data-oid="i_-c7wr"
+          >
+            <StaffListFetcher orgId={params.orgId} data-oid="arppbxv" />
           </Suspense>
         </div>
       </div>

@@ -3,9 +3,7 @@
 import * as React from "react"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
 import { Check } from "lucide-react"
-
 import { cn } from "@/lib/utils"
-
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
@@ -17,14 +15,15 @@ const Checkbox = React.forwardRef<
       className
     )}
     {...props}
+    data-oid="drby2qd"
   >
     <CheckboxPrimitive.Indicator
       className={cn("flex items-center justify-center text-current")}
+      data-oid="-wrh0hs"
     >
-      <Check className="size-4" />
+      <Check className="size-4" data-oid="kls.2z6" />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ))
 Checkbox.displayName = CheckboxPrimitive.Root.displayName
-
 export { Checkbox }

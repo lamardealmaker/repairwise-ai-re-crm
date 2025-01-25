@@ -3,21 +3,13 @@
 import * as React from "react"
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
-
 import { cn } from "@/lib/utils"
-
 const ContextMenu = ContextMenuPrimitive.Root
-
 const ContextMenuTrigger = ContextMenuPrimitive.Trigger
-
 const ContextMenuGroup = ContextMenuPrimitive.Group
-
 const ContextMenuPortal = ContextMenuPrimitive.Portal
-
 const ContextMenuSub = ContextMenuPrimitive.Sub
-
 const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup
-
 const ContextMenuSubTrigger = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.SubTrigger>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubTrigger> & {
@@ -32,13 +24,13 @@ const ContextMenuSubTrigger = React.forwardRef<
       className
     )}
     {...props}
+    data-oid="b4wsvfo"
   >
     {children}
-    <ChevronRight className="ml-auto size-4" />
+    <ChevronRight className="ml-auto size-4" data-oid="8smfo6a" />
   </ContextMenuPrimitive.SubTrigger>
 ))
 ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName
-
 const ContextMenuSubContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubContent>
@@ -50,15 +42,15 @@ const ContextMenuSubContent = React.forwardRef<
       className
     )}
     {...props}
+    data-oid="81sttp2"
   />
 ))
 ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName
-
 const ContextMenuContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
 >(({ className, ...props }, ref) => (
-  <ContextMenuPrimitive.Portal>
+  <ContextMenuPrimitive.Portal data-oid="yr.lr26">
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
@@ -66,11 +58,11 @@ const ContextMenuContent = React.forwardRef<
         className
       )}
       {...props}
+      data-oid="6ky_xhu"
     />
   </ContextMenuPrimitive.Portal>
 ))
 ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName
-
 const ContextMenuItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Item> & {
@@ -85,10 +77,10 @@ const ContextMenuItem = React.forwardRef<
       className
     )}
     {...props}
+    data-oid=":5fnkbz"
   />
 ))
 ContextMenuItem.displayName = ContextMenuPrimitive.Item.displayName
-
 const ContextMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.CheckboxItem>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.CheckboxItem>
@@ -101,10 +93,14 @@ const ContextMenuCheckboxItem = React.forwardRef<
     )}
     checked={checked}
     {...props}
+    data-oid="t:xf1rt"
   >
-    <span className="absolute left-2 flex size-3.5 items-center justify-center">
-      <ContextMenuPrimitive.ItemIndicator>
-        <Check className="size-4" />
+    <span
+      className="absolute left-2 flex size-3.5 items-center justify-center"
+      data-oid="9fz66_u"
+    >
+      <ContextMenuPrimitive.ItemIndicator data-oid="cvh04dx">
+        <Check className="size-4" data-oid=":8b.f76" />
       </ContextMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -112,7 +108,6 @@ const ContextMenuCheckboxItem = React.forwardRef<
 ))
 ContextMenuCheckboxItem.displayName =
   ContextMenuPrimitive.CheckboxItem.displayName
-
 const ContextMenuRadioItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.RadioItem>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.RadioItem>
@@ -124,17 +119,20 @@ const ContextMenuRadioItem = React.forwardRef<
       className
     )}
     {...props}
+    data-oid="bxe1c0x"
   >
-    <span className="absolute left-2 flex size-3.5 items-center justify-center">
-      <ContextMenuPrimitive.ItemIndicator>
-        <Circle className="size-2 fill-current" />
+    <span
+      className="absolute left-2 flex size-3.5 items-center justify-center"
+      data-oid="8rf21k_"
+    >
+      <ContextMenuPrimitive.ItemIndicator data-oid="p3r6i80">
+        <Circle className="size-2 fill-current" data-oid="mza88uv" />
       </ContextMenuPrimitive.ItemIndicator>
     </span>
     {children}
   </ContextMenuPrimitive.RadioItem>
 ))
 ContextMenuRadioItem.displayName = ContextMenuPrimitive.RadioItem.displayName
-
 const ContextMenuLabel = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Label> & {
@@ -149,10 +147,10 @@ const ContextMenuLabel = React.forwardRef<
       className
     )}
     {...props}
+    data-oid="ibqcd5h"
   />
 ))
 ContextMenuLabel.displayName = ContextMenuPrimitive.Label.displayName
-
 const ContextMenuSeparator = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Separator>
@@ -161,10 +159,10 @@ const ContextMenuSeparator = React.forwardRef<
     ref={ref}
     className={cn("bg-border -mx-1 my-1 h-px", className)}
     {...props}
+    data-oid="p7kfjzm"
   />
 ))
 ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName
-
 const ContextMenuShortcut = ({
   className,
   ...props
@@ -176,11 +174,11 @@ const ContextMenuShortcut = ({
         className
       )}
       {...props}
+      data-oid="5w7_gqe"
     />
   )
 }
 ContextMenuShortcut.displayName = "ContextMenuShortcut"
-
 export {
   ContextMenu,
   ContextMenuTrigger,

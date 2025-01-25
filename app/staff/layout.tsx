@@ -4,14 +4,12 @@ import { getUserByClerkIdAction } from "@/actions/db/users-actions"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-
 export default async function StaffLayout({
   children
 }: {
   children: React.ReactNode
 }) {
   const { userId } = await auth()
-
   if (!userId) {
     console.log("No userId found, redirecting to login")
     redirect("/login")
@@ -25,7 +23,6 @@ export default async function StaffLayout({
     user: userResult.data,
     role: userResult.data?.role
   })
-
   if (
     !userResult.isSuccess ||
     !userResult.data ||
@@ -34,11 +31,10 @@ export default async function StaffLayout({
     console.log("User is not staff, redirecting to home")
     redirect("/") // Redirect non-staff users to home
   }
-
   return (
-    <div className="min-h-screen">
-      <DashboardHeader />
-      <main>{children}</main>
+    <div className="min-h-screen" data-oid="eesnd7r">
+      <DashboardHeader data-oid="n31edjm" />
+      <main data-oid="z2.ruae">{children}</main>
     </div>
   )
 }

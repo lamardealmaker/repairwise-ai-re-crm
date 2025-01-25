@@ -10,11 +10,9 @@ import { cn } from "@/lib/utils"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { HTMLAttributes, ReactNode, useEffect, useState } from "react"
-
 interface ThemeSwitcherProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode
 }
-
 export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
   const { setTheme, theme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -23,11 +21,9 @@ export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
   useEffect(() => {
     setMounted(true)
   }, [])
-
   if (!mounted) {
-    return <div className={cn("p-1", props.className)} />
+    return <div className={cn("p-1", props.className)} data-oid="ghe19s9" />
   }
-
   return (
     <div
       className={cn(
@@ -35,11 +31,12 @@ export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
         props.className
       )}
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      data-oid="osp6a5j"
     >
       {theme === "dark" ? (
-        <Moon className="size-6" />
+        <Moon className="size-6" data-oid="wgou.t4" />
       ) : (
-        <Sun className="size-6" />
+        <Sun className="size-6" data-oid="t-qrp2e" />
       )}
     </div>
   )

@@ -9,10 +9,8 @@ This client component identifies the user in PostHog.
 import { useUser } from "@clerk/nextjs"
 import posthog from "posthog-js"
 import { useEffect } from "react"
-
 export function PostHogUserIdentify() {
   const { user } = useUser()
-
   useEffect(() => {
     if (user?.id) {
       // Identify the user in PostHog
@@ -22,6 +20,5 @@ export function PostHogUserIdentify() {
       posthog.reset()
     }
   }, [user?.id])
-
   return null
 }

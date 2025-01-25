@@ -29,7 +29,6 @@ import {
   Trash2,
   type LucideIcon
 } from "lucide-react"
-
 export function NavProjects({
   projects
 }: {
@@ -40,52 +39,72 @@ export function NavProjects({
   }[]
 }) {
   const { isMobile } = useSidebar()
-
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Projects</SidebarGroupLabel>
-      <SidebarMenu>
+    <SidebarGroup
+      className="group-data-[collapsible=icon]:hidden"
+      data-oid="3y6.0tn"
+    >
+      <SidebarGroupLabel data-oid="fgn:.h0">Projects</SidebarGroupLabel>
+      <SidebarMenu data-oid="w_c.mln">
         {projects.map(item => (
-          <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
-              <a href={item.url}>
-                <item.icon />
-                <span>{item.name}</span>
+          <SidebarMenuItem key={item.name} data-oid="8-5lyr1">
+            <SidebarMenuButton asChild data-oid="pm080ce">
+              <a href={item.url} data-oid="vhxcd7v">
+                <item.icon data-oid="kq:.hrj" />
+                <span data-oid="w.1.:ku">{item.name}</span>
               </a>
             </SidebarMenuButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover>
-                  <MoreHorizontal />
-                  <span className="sr-only">More</span>
+            <DropdownMenu data-oid="42-vnq.">
+              <DropdownMenuTrigger asChild data-oid="j86vyyl">
+                <SidebarMenuAction showOnHover data-oid=":uvqc76">
+                  <MoreHorizontal data-oid="h1:hf.6" />
+                  <span className="sr-only" data-oid="jq07dzx">
+                    More
+                  </span>
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-48 rounded-lg"
                 side={isMobile ? "bottom" : "right"}
                 align={isMobile ? "end" : "start"}
+                data-oid="-f:1tem"
               >
-                <DropdownMenuItem>
-                  <Folder className="text-muted-foreground" />
-                  <span>View Project</span>
+                <DropdownMenuItem data-oid="cg1.ko7">
+                  <Folder
+                    className="text-muted-foreground"
+                    data-oid="9u.mtwi"
+                  />
+                  <span data-oid="07agq2r">View Project</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Forward className="text-muted-foreground" />
-                  <span>Share Project</span>
+                <DropdownMenuItem data-oid="dee.ls1">
+                  <Forward
+                    className="text-muted-foreground"
+                    data-oid="iiw8gbi"
+                  />
+                  <span data-oid="w312rr0">Share Project</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Trash2 className="text-muted-foreground" />
-                  <span>Delete Project</span>
+                <DropdownMenuSeparator data-oid="nslwvk1" />
+                <DropdownMenuItem data-oid="xexdo67">
+                  <Trash2
+                    className="text-muted-foreground"
+                    data-oid="4i8p.t6"
+                  />
+                  <span data-oid="y51ht9i">Delete Project</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
         ))}
-        <SidebarMenuItem>
-          <SidebarMenuButton className="text-sidebar-foreground/70">
-            <MoreHorizontal className="text-sidebar-foreground/70" />
-            <span>More</span>
+        <SidebarMenuItem data-oid="_mq9380">
+          <SidebarMenuButton
+            className="text-sidebar-foreground/70"
+            data-oid="6olp.y."
+          >
+            <MoreHorizontal
+              className="text-sidebar-foreground/70"
+              data-oid="dsojrti"
+            />
+            <span data-oid="okbc3ns">More</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

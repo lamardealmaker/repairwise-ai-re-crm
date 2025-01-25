@@ -19,7 +19,6 @@ import {
   SquareTerminal
 } from "lucide-react"
 import * as React from "react"
-
 import {
   Sidebar,
   SidebarContent,
@@ -63,9 +62,18 @@ const data = {
       icon: SquareTerminal,
       isActive: true,
       items: [
-        { title: "History", url: "#" },
-        { title: "Starred", url: "#" },
-        { title: "Settings", url: "#" }
+        {
+          title: "History",
+          url: "#"
+        },
+        {
+          title: "Starred",
+          url: "#"
+        },
+        {
+          title: "Settings",
+          url: "#"
+        }
       ]
     },
     {
@@ -73,9 +81,18 @@ const data = {
       url: "#",
       icon: Bot,
       items: [
-        { title: "Genesis", url: "#" },
-        { title: "Explorer", url: "#" },
-        { title: "Quantum", url: "#" }
+        {
+          title: "Genesis",
+          url: "#"
+        },
+        {
+          title: "Explorer",
+          url: "#"
+        },
+        {
+          title: "Quantum",
+          url: "#"
+        }
       ]
     },
     {
@@ -83,10 +100,22 @@ const data = {
       url: "#",
       icon: BookOpen,
       items: [
-        { title: "Introduction", url: "#" },
-        { title: "Get Started", url: "#" },
-        { title: "Tutorials", url: "#" },
-        { title: "Changelog", url: "#" }
+        {
+          title: "Introduction",
+          url: "#"
+        },
+        {
+          title: "Get Started",
+          url: "#"
+        },
+        {
+          title: "Tutorials",
+          url: "#"
+        },
+        {
+          title: "Changelog",
+          url: "#"
+        }
       ]
     },
     {
@@ -94,34 +123,57 @@ const data = {
       url: "#",
       icon: Settings2,
       items: [
-        { title: "General", url: "#" },
-        { title: "Team", url: "#" },
-        { title: "Billing", url: "#" },
-        { title: "Limits", url: "#" }
+        {
+          title: "General",
+          url: "#"
+        },
+        {
+          title: "Team",
+          url: "#"
+        },
+        {
+          title: "Billing",
+          url: "#"
+        },
+        {
+          title: "Limits",
+          url: "#"
+        }
       ]
     }
   ],
   projects: [
-    { name: "Design Engineering", url: "#", icon: Frame },
-    { name: "Sales & Marketing", url: "#", icon: PieChart },
-    { name: "Travel", url: "#", icon: Map }
+    {
+      name: "Design Engineering",
+      url: "#",
+      icon: Frame
+    },
+    {
+      name: "Sales & Marketing",
+      url: "#",
+      icon: PieChart
+    },
+    {
+      name: "Travel",
+      url: "#",
+      icon: Map
+    }
   ]
 }
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+    <Sidebar collapsible="icon" {...props} data-oid="yqpgne.">
+      <SidebarHeader data-oid="mxismi9">
+        <TeamSwitcher teams={data.teams} data-oid=".wzzm:-" />
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+      <SidebarContent data-oid="-xsgg4m">
+        <NavMain items={data.navMain} data-oid="fsf.eh1" />
+        <NavProjects projects={data.projects} data-oid="904zogg" />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser />
+      <SidebarFooter data-oid="08m53uk">
+        <NavUser data-oid="adj7rek" />
       </SidebarFooter>
-      <SidebarRail />
+      <SidebarRail data-oid="mknd9_4" />
     </Sidebar>
   )
 }

@@ -9,28 +9,24 @@ import { auth } from "@clerk/nextjs/server"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-
 interface Props {
-  params: { ticketId: string }
+  params: {
+    ticketId: string
+  }
 }
-
 export default async function StaffTicketPage({ params }: Props) {
   const { userId } = await auth()
-
   if (!userId) {
-    return <div>Please sign in to view this ticket.</div>
+    return <div data-oid="gc.ta4e">Please sign in to view this ticket.</div>
   }
 
   // Get ticket with role-based access check
   const ticketResult = await getTicketByIdAction(params.ticketId)
   const messagesResult = await getTicketMessagesAction(params.ticketId)
-
   if (!ticketResult.isSuccess || !ticketResult.data) {
     notFound()
   }
-
   const ticket = ticketResult.data
-
   function getPriorityColor(priority: string) {
     switch (priority) {
       case "critical":
@@ -43,7 +39,6 @@ export default async function StaffTicketPage({ params }: Props) {
         return "bg-green-500"
     }
   }
-
   function getStatusColor(status: string) {
     switch (status) {
       case "open":
@@ -60,30 +55,36 @@ export default async function StaffTicketPage({ params }: Props) {
         return "bg-gray-500"
     }
   }
-
   return (
-    <div className="container space-y-8 py-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="mb-1 flex items-center gap-2">
+    <div className="container space-y-8 py-8" data-oid="grkwj_5">
+      <div className="flex items-start justify-between" data-oid="v-k1-dx">
+        <div data-oid="lcv3j2.">
+          <div className="mb-1 flex items-center gap-2" data-oid="rjdn.um">
             <Link
               href="/staff/tickets"
               className="text-muted-foreground text-sm hover:underline"
+              data-oid="w.6h_zl"
             >
               ← Back to maintenance dashboard
             </Link>
           </div>
-          <h1 className="text-3xl font-bold">{ticket.title}</h1>
-          <div className="mt-2 flex items-center gap-2">
+          <h1 className="text-3xl font-bold" data-oid="hu.lvna">
+            {ticket.title}
+          </h1>
+          <div className="mt-2 flex items-center gap-2" data-oid="c4g2k6c">
             <Badge
               className={`${getPriorityColor(ticket.priority)} text-white`}
+              data-oid="kqr0zsx"
             >
               {ticket.priority}
             </Badge>
-            <Badge className={`${getStatusColor(ticket.status)} text-white`}>
+            <Badge
+              className={`${getStatusColor(ticket.status)} text-white`}
+              data-oid="vu7-gw9"
+            >
               {ticket.status.replace(/_/g, " ")}
             </Badge>
-            <span className="text-muted-foreground text-sm">
+            <span className="text-muted-foreground text-sm" data-oid="m7wst_h">
               Opened{" "}
               {formatDistanceToNow(new Date(ticket.createdAt), {
                 addSuffix: true
@@ -92,19 +93,24 @@ export default async function StaffTicketPage({ params }: Props) {
           </div>
         </div>
 
-        <TicketStatusUpdate ticket={ticket} />
+        <TicketStatusUpdate ticket={ticket} data-oid="3.c:tny" />
       </div>
 
-      <div className="space-y-4">
-        <div className="rounded-lg border p-4">
-          <h2 className="mb-2 font-semibold">Description</h2>
-          <p className="whitespace-pre-wrap">{ticket.description}</p>
+      <div className="space-y-4" data-oid=":v-mc_t">
+        <div className="rounded-lg border p-4" data-oid="h7lkmq6">
+          <h2 className="mb-2 font-semibold" data-oid=":ir3d4n">
+            Description
+          </h2>
+          <p className="whitespace-pre-wrap" data-oid="4rnvtr1">
+            {ticket.description}
+          </p>
         </div>
 
         <TicketMessageThread
           ticketId={ticket.id}
           messages={messagesResult.isSuccess ? messagesResult.data : []}
           currentUserId={userId}
+          data-oid="ry:uv7r"
         />
       </div>
     </div>

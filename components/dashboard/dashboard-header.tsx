@@ -16,7 +16,6 @@ import { ThemeSwitcher } from "../utilities/theme-switcher"
 import { OrgSwitcher } from "./org-switcher"
 import { useEffect, useState } from "react"
 import { getUserRolesAction } from "@/actions/db/user-roles-actions"
-
 export function DashboardHeader() {
   const pathname = usePathname()
   const [userRole, setUserRole] = useState<
@@ -27,7 +26,6 @@ export function DashboardHeader() {
   // Extract orgId from pathname
   const orgIdMatch = pathname.match(/\/orgs\/([^\/]+)/)
   const orgId = orgIdMatch ? orgIdMatch[1] : ""
-
   useEffect(() => {
     async function loadUserRole() {
       if (!orgId) return
@@ -47,7 +45,6 @@ export function DashboardHeader() {
         setIsLoading(false)
       }
     }
-
     loadUserRole()
   }, [orgId])
 
@@ -80,33 +77,37 @@ export function DashboardHeader() {
         }
       ].filter(item => item.show)
     : []
-
   return (
-    <header className="border-b">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          <OrgSwitcher />
+    <header className="border-b" data-oid="kanzwqn">
+      <div
+        className="container mx-auto flex h-16 items-center justify-between px-4"
+        data-oid="i6ounf-"
+      >
+        <div className="flex items-center gap-4" data-oid="57ahdae">
+          <OrgSwitcher data-oid=":9w7kfu" />
         </div>
 
-        <nav className="flex flex-1 items-center justify-center space-x-6">
+        <nav
+          className="flex flex-1 items-center justify-center space-x-6"
+          data-oid="6-j:e26"
+        >
           {!isLoading &&
             navigation.map(item => (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`hover:text-primary flex items-center gap-2 text-sm font-medium transition-colors ${
-                  item.current ? "text-foreground" : "text-foreground/60"
-                }`}
+                className={`hover:text-primary flex items-center gap-2 text-sm font-medium transition-colors ${item.current ? "text-foreground" : "text-foreground/60"}`}
+                data-oid="juncfor"
               >
-                <item.icon className="size-4" />
+                <item.icon className="size-4" data-oid="0_vi8w2" />
                 {item.name}
               </Link>
             ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <ThemeSwitcher />
-          <UserButton afterSignOutUrl="/" />
+        <div className="flex items-center gap-2" data-oid="9t1yb7w">
+          <ThemeSwitcher data-oid="mocrl4f" />
+          <UserButton afterSignOutUrl="/" data-oid="i8fkbtz" />
         </div>
       </div>
     </header>

@@ -7,5 +7,5 @@ This server page returns a simple "About Page" component as a (marketing) route.
 "use server"
 
 export default async function AboutPage() {
-  return <div>About Page</div>
+  return <div data-oid="xps9ke3">About Page</div>
 }

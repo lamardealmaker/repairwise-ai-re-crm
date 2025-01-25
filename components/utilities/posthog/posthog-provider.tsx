@@ -8,7 +8,6 @@ This client component provides the PostHog provider for the app.
 
 import posthog from "posthog-js"
 import { PostHogProvider } from "posthog-js/react"
-
 if (
   typeof window !== "undefined" &&
   process.env.NEXT_PUBLIC_POSTHOG_KEY &&
@@ -20,5 +19,9 @@ if (
   })
 }
 export function CSPostHogProvider({ children }: { children: React.ReactNode }) {
-  return <PostHogProvider client={posthog}>{children}</PostHogProvider>
+  return (
+    <PostHogProvider client={posthog} data-oid="5ggt00e">
+      {children}
+    </PostHogProvider>
+  )
 }

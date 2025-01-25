@@ -14,7 +14,6 @@ import { Organization } from "@/types"
 import { Building, ChevronDown, Plus } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-
 export function OrgSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
@@ -48,7 +47,6 @@ export function OrgSwitcher() {
         setIsLoading(false)
       }
     }
-
     loadOrganizations()
   }, []) // Empty dependency array - only run once on mount
 
@@ -58,54 +56,59 @@ export function OrgSwitcher() {
       router.push(`/dashboard/orgs/${org.id}`)
     }
   }
-
   function onCreateOrg() {
     router.push("/dashboard/orgs/create")
   }
-
   if (isLoading) {
     return (
-      <Button variant="outline" disabled>
-        <Building className="mr-2 size-4" />
+      <Button variant="outline" disabled data-oid="-2seu_2">
+        <Building className="mr-2 size-4" data-oid="g6yn:9r" />
         Loading...
-        <ChevronDown className="ml-2 size-4" />
+        <ChevronDown className="ml-2 size-4" data-oid="iph_3v2" />
       </Button>
     )
   }
-
   if (organizations.length === 0) {
     return (
-      <Button variant="outline" onClick={onCreateOrg}>
-        <Plus className="mr-2 size-4" />
+      <Button variant="outline" onClick={onCreateOrg} data-oid="jp7d00_">
+        <Plus className="mr-2 size-4" data-oid="0xz:6iu" />
         Create Organization
       </Button>
     )
   }
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-52 justify-start">
-          <Building className="mr-2 size-4" />
+    <DropdownMenu data-oid="2a71uu_">
+      <DropdownMenuTrigger asChild data-oid="mjv:5zy">
+        <Button
+          variant="outline"
+          className="w-52 justify-start"
+          data-oid="0babb9e"
+        >
+          <Building className="mr-2 size-4" data-oid="4e4mmyr" />
           {selectedOrg?.name || "Select Organization"}
-          <ChevronDown className="ml-auto size-4" />
+          <ChevronDown className="ml-auto size-4" data-oid="b18nw3w" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-52">
-        <DropdownMenuLabel>Organizations</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent className="w-52" data-oid="hcqd:ph">
+        <DropdownMenuLabel data-oid="yr0v8ry">Organizations</DropdownMenuLabel>
+        <DropdownMenuSeparator data-oid="hnnz8j7" />
         {organizations.map(org => (
           <DropdownMenuItem
             key={org.id}
             onClick={() => onOrgSelect(org)}
             className="cursor-pointer"
+            data-oid="xykzokl"
           >
             {org.name}
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onCreateOrg} className="cursor-pointer">
-          <Plus className="mr-2 size-4" />
+        <DropdownMenuSeparator data-oid="n6z10_d" />
+        <DropdownMenuItem
+          onClick={onCreateOrg}
+          className="cursor-pointer"
+          data-oid="41z9jc1"
+        >
+          <Plus className="mr-2 size-4" data-oid="c1bk7r3" />
           Create Organization
         </DropdownMenuItem>
       </DropdownMenuContent>
