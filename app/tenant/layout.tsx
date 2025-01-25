@@ -1,7 +1,9 @@
 "use server"
 
 import { getUserByClerkIdAction } from "@/actions/db/users-actions"
+import { getUserRolesAction } from "@/actions/db/user-roles-actions"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { SelectUserRole } from "@/db/schema"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 
@@ -37,12 +39,22 @@ export default async function TenantLayout({
       redirect("/")
     }
 
-    // Verify tenant role
-    if (userResult.data.role !== "tenant") {
-      console.log(
-        "[Tenant Layout] Non-tenant user detected, redirecting to home"
-      )
+    // Get user's organizational roles
+    const rolesResult = await getUserRolesAction(userId)
+    if (!rolesResult.isSuccess) {
+      console.error("[Tenant Layout] Failed to get user roles")
       redirect("/")
+    }
+
+    // Check if user has any tenant role in any organization
+    const hasTenantRole = rolesResult.data.some(
+      (role: SelectUserRole) => role.role === "TENANT"
+    )
+    if (!hasTenantRole) {
+      console.log(
+        "[Tenant Layout] User has no tenant role, redirecting to staff dashboard"
+      )
+      redirect("/staff")
     }
 
     return (
