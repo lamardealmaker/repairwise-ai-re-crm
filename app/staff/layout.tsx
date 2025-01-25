@@ -1,10 +1,8 @@
 "use server"
 
 import { getUserByClerkIdAction } from "@/actions/db/users-actions"
-import { getUserRolesAction } from "@/actions/db/user-roles-actions"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
-import { SelectUserRole } from "@/db/schema"
-import { auth } from "@clerk/nextjs/server"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 
 export default async function StaffLayout({
@@ -19,6 +17,13 @@ export default async function StaffLayout({
       redirect("/login")
     }
 
+    // Get user data from Clerk
+    const user = await currentUser()
+    if (!user) {
+      console.error("[Staff Layout] No user found in Clerk")
+      redirect("/login")
+    }
+
     // Check database role
     const userResult = await getUserByClerkIdAction(userId)
     console.log("[Staff Layout] User check result:", {
@@ -29,26 +34,15 @@ export default async function StaffLayout({
 
     if (!userResult.isSuccess || !userResult.data) {
       console.error("[Staff Layout] User not found in database")
-      redirect("/")
+      redirect("/login")
     }
 
-    // Get user's organizational roles
-    const rolesResult = await getUserRolesAction(userId)
-    if (!rolesResult.isSuccess) {
-      console.error("[Staff Layout] Failed to get user roles")
-      redirect("/")
-    }
-
-    // Check if user has any staff-like roles (ADMIN, EMPLOYEE, MAINTENANCE)
-    const hasStaffRole = rolesResult.data.some((role: SelectUserRole) =>
-      ["ADMIN", "EMPLOYEE", "MAINTENANCE"].includes(role.role)
-    )
-
-    if (!hasStaffRole) {
+    // Verify staff role
+    if (userResult.data.role !== "staff") {
       console.log(
-        "[Staff Layout] User has no staff role, redirecting to tenant dashboard"
+        "[Staff Layout] Non-staff user detected, redirecting to tenant dashboard"
       )
-      redirect("/tenant")
+      redirect("/tenant/dashboard")
     }
 
     return (
