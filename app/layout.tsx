@@ -79,12 +79,12 @@ async function initUser() {
         clerkId: userId,
         email,
         fullName,
-        // If no invite exists, they're staff. If invited, base role depends on invite role
+        // If they have a pending invite, use that role, otherwise tenant
         role: pendingInvite
           ? pendingInvite.role === "TENANT"
             ? "tenant"
             : "staff"
-          : "staff"
+          : "tenant"
       })
 
       // If this was an invited user, create their organization role
