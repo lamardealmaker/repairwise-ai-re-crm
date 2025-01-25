@@ -1,6 +1,7 @@
 "use client"
 
 import { createPropertyAction } from "@/actions/db/properties-actions"
+import { getUserByClerkIdAction } from "@/actions/db/users-actions"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -13,50 +14,103 @@ import {
 import { Input } from "@/components/ui/input"
 import { CreatePropertyInput } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
+
 const formSchema = z.object({
   name: z.string().min(1, "Property name is required")
 })
+
 type FormData = z.infer<typeof formSchema>
+
 interface PropertyWizardProps {
   orgId: string
 }
+
 export function PropertyWizard({ orgId }: PropertyWizardProps) {
   const router = useRouter()
+  const { userId } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: ""
     }
   })
+
+  // Verify user role on mount
+  useEffect(() => {
+    async function verifyRole() {
+      if (!userId) return
+
+      const userResult = await getUserByClerkIdAction(userId)
+      if (!userResult.isSuccess || !userResult.data) {
+        toast.error("User not found")
+        router.push("/")
+        return
+      }
+
+      // Only staff users can create properties
+      if (userResult.data.role !== "staff") {
+        toast.error("Only staff members can create properties")
+        router.push("/")
+        return
+      }
+    }
+
+    verifyRole()
+  }, [userId, router])
+
   async function onSubmit(data: FormData) {
+    if (!userId) {
+      toast.error("You must be logged in to create a property")
+      return
+    }
+
     try {
       setIsLoading(true)
+
+      // Verify role again before creating property
+      const userResult = await getUserByClerkIdAction(userId)
+      if (
+        !userResult.isSuccess ||
+        !userResult.data ||
+        userResult.data.role !== "staff"
+      ) {
+        toast.error("Only staff members can create properties")
+        return
+      }
+
       const input: CreatePropertyInput = {
         name: data.name,
         orgId
       }
+
       const result = await createPropertyAction(input)
       if (!result.isSuccess) {
         toast.error(result.message)
         return
       }
+
       toast.success(result.message)
       router.push(`/dashboard/orgs/${orgId}`)
     } catch (error) {
       toast.error("Something went wrong")
+      console.error("Error creating property:", error)
     } finally {
       setIsLoading(false)
     }
   }
+
   function onSkip() {
     router.push(`/dashboard/orgs/${orgId}`)
   }
+
   return (
     <div className="rounded-lg border p-4" data-oid="m:f3w-p">
       <div className="mb-6" data-oid="x1mq7_4">
