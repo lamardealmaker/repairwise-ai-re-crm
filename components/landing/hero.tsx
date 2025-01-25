@@ -9,8 +9,9 @@ This client component provides the hero section for the landing page.
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
-import { Rocket } from "lucide-react"
+import { Home } from "lucide-react"
 import Link from "next/link"
+
 export const HeroSection = () => {
   return (
     <div
@@ -60,7 +61,7 @@ export const HeroSection = () => {
             data-oid="l:jv0bv"
           >
             <Link href="/signup" data-oid="t942730">
-              <Rocket className="mr-2 size-5" data-oid="9f5wklu" />
+              <Home className="mr-2 size-5" data-oid="9f5wklu" />
               Start Managing Smarter
             </Link>
           </Button>

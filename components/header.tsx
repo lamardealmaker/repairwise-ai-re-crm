@@ -15,7 +15,7 @@ import {
   UserButton,
   useUser
 } from "@clerk/nextjs"
-import { Menu, Rocket, X } from "lucide-react"
+import { Menu, Rocket, X, Home } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { ThemeSwitcher } from "./utilities/theme-switcher"
@@ -67,7 +67,7 @@ export default function Header() {
           className="flex items-center space-x-2 hover:cursor-pointer hover:opacity-80"
           data-oid="8_adis8"
         >
-          <Rocket className="size-6" data-oid="yucn_9c" />
+          <Home className="size-6" data-oid="yucn_9c" />
           <Link href="/" className="flex items-center" data-oid="gwf7bii">
             <span className="text-lg font-semibold" data-oid="13579_4">
               RepairWise
