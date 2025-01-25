@@ -1,7 +1,7 @@
 "use server"
 
 import { getUserByClerkIdAction } from "@/actions/db/users-actions"
-import { auth, clerkClient } from "@clerk/nextjs/server"
+import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 
 export default async function RedirectPage() {
@@ -18,14 +18,11 @@ export default async function RedirectPage() {
       redirect("/login")
     }
 
-    // Sync role with Clerk metadata
-    await clerkClient.users.updateUserMetadata(userId, {
-      publicMetadata: {
-        role: userResult.data.role
-      }
+    // Log for debugging
+    console.log("[Auth Redirect] User data:", {
+      userId,
+      role: userResult.data.role
     })
-
-    console.log("[Auth Redirect] User role:", userResult.data.role)
 
     // Redirect based on role
     if (userResult.data.role === "staff") {

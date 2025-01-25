@@ -4,7 +4,7 @@ Contains middleware for protecting routes, checking user authentication, and red
 </ai_context>
 */
 
-import { clerkMiddleware, getAuth } from "@clerk/nextjs/server"
+import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -44,22 +44,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     return NextResponse.next()
   }
 
-  // Get user metadata to check role
-  const { getToken } = auth
-  const token = await getToken()
-  const role = token?.role as string
-
-  // Enforce role-based access
-  if (role === "staff" && matchesPatterns(pathname, TENANT_ROUTES)) {
-    console.log("[Middleware] Staff user attempting to access tenant route, redirecting to staff dashboard")
-    return NextResponse.redirect(new URL("/staff/dashboard", req.url))
-  }
-
-  if (role === "tenant" && matchesPatterns(pathname, STAFF_ROUTES)) {
-    console.log("[Middleware] Tenant user attempting to access staff route, redirecting to tenant dashboard")
-    return NextResponse.redirect(new URL("/tenant/dashboard", req.url))
-  }
-
+  // Let the layouts handle role-based access
   return NextResponse.next()
 })
 
