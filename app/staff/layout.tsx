@@ -2,7 +2,7 @@
 
 import { getUserByClerkIdAction } from "@/actions/db/users-actions"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { auth, currentUser, clerkClient } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 
 export default async function StaffLayout({
@@ -20,6 +20,8 @@ export default async function StaffLayout({
 
     // Get Clerk user data to check metadata
     const user = await currentUser()
+    const clerk = await clerkClient()
+
     console.log("[Staff Layout] Clerk user data:", {
       userId,
       metadata: user?.publicMetadata,
@@ -43,9 +45,28 @@ export default async function StaffLayout({
       redirect("/")
     }
 
+    // Ensure role is synced with Clerk metadata
+    if (userResult.data.role !== user?.publicMetadata?.role) {
+      console.log("[Staff Layout] Syncing role with Clerk metadata")
+      await clerk.users.updateUser(userId, {
+        publicMetadata: {
+          role: userResult.data.role
+        }
+      })
+    }
+
+    // If user is tenant, redirect to tenant dashboard
+    if (userResult.data.role === "tenant") {
+      console.log(
+        "[Staff Layout] Tenant user detected, redirecting to tenant dashboard"
+      )
+      redirect("/tenant/tickets")
+    }
+
+    // If user is not staff (and not tenant), redirect to home
     if (userResult.data.role !== "staff") {
       console.log(
-        "[Staff Layout] User is not staff, redirecting to home. Role:",
+        "[Staff Layout] Invalid role detected, redirecting to home. Role:",
         userResult.data.role
       )
       redirect("/")
