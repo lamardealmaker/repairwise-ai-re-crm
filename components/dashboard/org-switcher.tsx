@@ -57,10 +57,22 @@ export function OrgSwitcher() {
           }
         }
 
-        // If no saved org and no URL org, use first available org
-        if (data.length > 0) {
+        // If no saved org and no URL org:
+        // For single org, use that
+        if (data.length === 1) {
           setSelectedOrg(data[0])
           localStorage.setItem(SELECTED_ORG_KEY, JSON.stringify(data[0]))
+          return
+        }
+        // For multiple orgs, use most recent
+        if (data.length > 1) {
+          const mostRecentOrg = [...data].sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )[0]
+          setSelectedOrg(mostRecentOrg)
+          localStorage.setItem(SELECTED_ORG_KEY, JSON.stringify(mostRecentOrg))
+          return
         }
       } catch (error) {
         console.error("Error initializing organizations:", error)
@@ -77,7 +89,7 @@ export function OrgSwitcher() {
 
     setSelectedOrg(org)
     localStorage.setItem(SELECTED_ORG_KEY, JSON.stringify(org))
-    router.push(`/dashboard/orgs/${org.id}`)
+    router.push(`/dashboard/orgs/${org.id}/tickets`)
   }
 
   function onCreateOrg() {

@@ -9,7 +9,7 @@ This client component provides the hero section for the landing page.
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
-import { Home } from "lucide-react"
+import { Home, Building2, User } from "lucide-react"
 import Link from "next/link"
 
 export const HeroSection = () => {
@@ -60,9 +60,15 @@ export const HeroSection = () => {
             className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
             data-oid="l:jv0bv"
           >
-            <Link href="/signup" data-oid="t942730">
-              <Home className="mr-2 size-5" data-oid="9f5wklu" />
-              Start Managing Smarter
+            <Link href="/staff/login">
+              <Building2 className="mr-2 size-5" />
+              Staff Login
+            </Link>
+          </Button>
+          <Button size="lg" asChild variant="outline">
+            <Link href="/tenant/login">
+              <User className="mr-2 size-5" />
+              Tenant Login
             </Link>
           </Button>
         </div>
