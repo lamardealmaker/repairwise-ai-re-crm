@@ -4,7 +4,6 @@ import { getUserByClerkIdAction } from "@/actions/db/users-actions"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { headers } from "next/headers"
 
 export default async function StaffLayout({
   children
@@ -16,33 +15,43 @@ export default async function StaffLayout({
     redirect("/login")
   }
 
-  const userResult = await getUserByClerkIdAction(userId)
-  const headersList = headers()
-  const pathname = headersList.get("x-invoke-path") || "unknown"
+  try {
+    const userResult = await getUserByClerkIdAction(userId)
+    console.log("[Staff Layout]", {
+      userId,
+      role: userResult.data?.role,
+      success: userResult.isSuccess
+    })
 
-  console.log("[Staff Layout]", {
-    pathname,
-    userId,
-    role: userResult.data?.role,
-    success: userResult.isSuccess
-  })
+    // Only redirect if we successfully got user data and they're not staff
+    if (
+      userResult.isSuccess &&
+      userResult.data &&
+      userResult.data.role !== "staff"
+    ) {
+      redirect("/tenant/tickets")
+    }
 
-  // If not a staff user, redirect to tenant pages
-  if (
-    !userResult.isSuccess ||
-    !userResult.data ||
-    userResult.data.role !== "staff"
-  ) {
-    redirect("/tenant/tickets")
-  }
-
-  return (
-    <div className="min-h-screen">
-      <div className="bg-yellow-100 p-2 text-sm">
-        Debug - User Role: {userResult.data.role} | Path: {pathname}
+    return (
+      <div className="min-h-screen">
+        <div className="bg-yellow-100 p-2 text-sm">
+          Debug - User Role: {userResult.data?.role || "Error loading role"}
+        </div>
+        <DashboardHeader />
+        <main>{children}</main>
       </div>
-      <DashboardHeader />
-      <main>{children}</main>
-    </div>
-  )
+    )
+  } catch (error) {
+    console.error("[Staff Layout] Database error:", error)
+    // On database error, show an error message but don't redirect
+    return (
+      <div className="min-h-screen">
+        <div className="bg-red-100 p-2 text-sm">
+          Error loading user data. Please try again later.
+        </div>
+        <DashboardHeader />
+        <main>{children}</main>
+      </div>
+    )
+  }
 }

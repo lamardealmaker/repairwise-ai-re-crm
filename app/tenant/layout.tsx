@@ -15,30 +15,43 @@ export default async function TenantLayout({
     redirect("/login")
   }
 
-  const userResult = await getUserByClerkIdAction(userId)
+  try {
+    const userResult = await getUserByClerkIdAction(userId)
+    console.log("[Tenant Layout]", {
+      userId,
+      role: userResult.data?.role,
+      success: userResult.isSuccess
+    })
 
-  console.log("[Tenant Layout]", {
-    userId,
-    role: userResult.data?.role,
-    success: userResult.isSuccess
-  })
+    // Only redirect if we successfully got user data and they're not tenant
+    if (
+      userResult.isSuccess &&
+      userResult.data &&
+      userResult.data.role !== "tenant"
+    ) {
+      redirect("/staff/tickets")
+    }
 
-  // If not a tenant user, redirect to staff pages
-  if (
-    !userResult.isSuccess ||
-    !userResult.data ||
-    userResult.data.role !== "tenant"
-  ) {
-    redirect("/staff/tickets")
-  }
-
-  return (
-    <div className="min-h-screen">
-      <div className="bg-yellow-100 p-2 text-sm">
-        Debug - User Role: {userResult.data.role}
+    return (
+      <div className="min-h-screen">
+        <div className="bg-yellow-100 p-2 text-sm">
+          Debug - User Role: {userResult.data?.role || "Error loading role"}
+        </div>
+        <DashboardHeader />
+        <main>{children}</main>
       </div>
-      <DashboardHeader />
-      <main>{children}</main>
-    </div>
-  )
+    )
+  } catch (error) {
+    console.error("[Tenant Layout] Database error:", error)
+    // On database error, show an error message but don't redirect
+    return (
+      <div className="min-h-screen">
+        <div className="bg-red-100 p-2 text-sm">
+          Error loading user data. Please try again later.
+        </div>
+        <DashboardHeader />
+        <main>{children}</main>
+      </div>
+    )
+  }
 }
