@@ -17,6 +17,12 @@ export default async function TenantLayout({
 
   const userResult = await getUserByClerkIdAction(userId)
 
+  console.log("[Tenant Layout]", {
+    userId,
+    role: userResult.data?.role,
+    success: userResult.isSuccess
+  })
+
   // If not a tenant user, redirect to staff pages
   if (
     !userResult.isSuccess ||
@@ -28,6 +34,9 @@ export default async function TenantLayout({
 
   return (
     <div className="min-h-screen">
+      <div className="bg-yellow-100 p-2 text-sm">
+        Debug - User Role: {userResult.data.role}
+      </div>
       <DashboardHeader />
       <main>{children}</main>
     </div>
