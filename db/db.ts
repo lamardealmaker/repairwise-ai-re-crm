@@ -33,7 +33,12 @@ console.log(
 
 const client = postgres(connectionString, {
   prepare: false,
-  ssl: process.env.NODE_ENV === "production"
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? {
+          rejectUnauthorized: false // Allow self-signed certificates
+        }
+      : false
 })
 
 // Define relations
