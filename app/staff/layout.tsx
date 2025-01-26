@@ -41,8 +41,9 @@ export default async function StaffLayout({
         const mostRecentOrg = rolesResult.data.sort(
           (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
         )[0]
-        redirect(`/staff/organizations/${mostRecentOrg.orgId}/tickets`)
+        redirect(`/staff/org/${mostRecentOrg.orgId}/tickets`)
       }
+      // If no orgs found, let them stay on /staff/tickets
     }
 
     return (

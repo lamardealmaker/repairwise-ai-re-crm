@@ -27,7 +27,7 @@ export default async function RedirectPage() {
       const mostRecentOrg = rolesResult.data.sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
       )[0]
-      redirect(`/staff/organizations/${mostRecentOrg.orgId}/tickets`)
+      redirect(`/staff/org/${mostRecentOrg.orgId}/tickets`)
     }
     // Fallback to tickets if no orgs found
     redirect("/staff/tickets")
