@@ -22,13 +22,13 @@ Global styles for the app.
     --primary: 200 30% 15%;
     --primary-foreground: 210 20% 98%;
     
-    --secondary: 151 40% 20%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 255 70% 82%;
+    --secondary-foreground: 200 20% 15%;
     
     --muted: 220 15% 94%;
     --muted-foreground: 220 10% 45%;
     
-    --accent: 255 30% 90%;
+    --accent: 255 70% 82%;
     --accent-foreground: 200 20% 15%;
     
     --destructive: 0 84% 60%;
@@ -36,7 +36,7 @@ Global styles for the app.
     
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 151 40% 20%;
+    --ring: 255 70% 82%;
     
     --radius: 0.5rem;
 
