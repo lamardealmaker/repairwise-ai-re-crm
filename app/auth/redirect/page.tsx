@@ -23,11 +23,15 @@ export default async function RedirectPage() {
     // Get user's organizations
     const rolesResult = await getUserRolesAction(userResult.data.id)
     if (rolesResult.isSuccess && rolesResult.data.length > 0) {
-      // Sort by most recent and get first org
+      // If only one org, use that
+      if (rolesResult.data.length === 1) {
+        redirect(`/dashboard/orgs/${rolesResult.data[0].orgId}/tickets`)
+      }
+      // If multiple orgs, sort by most recent
       const mostRecentOrg = rolesResult.data.sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
       )[0]
-      redirect(`/staff/org/${mostRecentOrg.orgId}/tickets`)
+      redirect(`/dashboard/orgs/${mostRecentOrg.orgId}/tickets`)
     }
     // Fallback to tickets if no orgs found
     redirect("/staff/tickets")
