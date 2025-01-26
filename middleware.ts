@@ -11,7 +11,6 @@ import type { NextRequest } from "next/server"
 // Define protected route patterns
 const STAFF_ROUTES = ["/staff/(.*)"]
 const TENANT_ROUTES = ["/tenant/(.*)"]
-const DASHBOARD_ROUTES = ["/dashboard/(.*)"]
 
 // Helper to check if URL matches any patterns
 const matchesPatterns = (url: string, patterns: string[]) =>
@@ -28,6 +27,8 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     pathname.includes("api") ||
     pathname === "/" ||
     pathname === "/login" ||
+    pathname === "/staff/login" ||
+    pathname === "/tenant/login" ||
     pathname === "/signup" ||
     pathname === "/auth/redirect"
   ) {
@@ -36,10 +37,11 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   // Require authentication for protected routes
   if (!userId) {
-    if (
-      matchesPatterns(pathname, [...STAFF_ROUTES, ...TENANT_ROUTES, ...DASHBOARD_ROUTES])
-    ) {
-      return NextResponse.redirect(new URL("/login", req.url))
+    if (matchesPatterns(pathname, STAFF_ROUTES)) {
+      return NextResponse.redirect(new URL("/staff/login", req.url))
+    }
+    if (matchesPatterns(pathname, TENANT_ROUTES)) {
+      return NextResponse.redirect(new URL("/tenant/login", req.url))
     }
     return NextResponse.next()
   }
