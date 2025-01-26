@@ -45,9 +45,11 @@ export const HeroSection = () => {
           className="text-muted-foreground mx-auto max-w-2xl text-lg"
           data-oid="2-ew0a_"
         >
-          RepairWise AI streamlines your apartment maintenance with intelligent
-          request handling, automated responses, and efficient repair
-          management.
+          Boost tenant satisfaction with lightning-fast response times and
+          seamless maintenance handling. Our AI-powered system automates request
+          processing, coordinates repairs efficiently, and ensures top-tier
+          service delivery—keeping your tenants happy and your properties
+          well-maintained.
         </p>
 
         <div
