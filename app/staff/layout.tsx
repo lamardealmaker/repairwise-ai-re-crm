@@ -1,6 +1,7 @@
 "use server"
 
 import { getUserByClerkIdAction } from "@/actions/db/users-actions"
+import { getUserRolesAction } from "@/actions/db/user-roles-actions"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
@@ -32,11 +33,20 @@ export default async function StaffLayout({
       redirect("/tenant/tickets")
     }
 
+    // If we're on the /staff/tickets page, redirect to most recent org
+    if (userResult.isSuccess && userResult.data) {
+      const rolesResult = await getUserRolesAction(userResult.data.id)
+      if (rolesResult.isSuccess && rolesResult.data.length > 0) {
+        // Sort by most recent and get first org
+        const mostRecentOrg = rolesResult.data.sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        )[0]
+        redirect(`/staff/organizations/${mostRecentOrg.orgId}/tickets`)
+      }
+    }
+
     return (
       <div className="min-h-screen">
-        <div className="bg-yellow-100 p-2 text-sm">
-          Debug - User Role: {userResult.data?.role || "Error loading role"}
-        </div>
         <DashboardHeader />
         <main>{children}</main>
       </div>

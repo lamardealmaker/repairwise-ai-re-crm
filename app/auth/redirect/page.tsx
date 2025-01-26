@@ -1,6 +1,7 @@
 "use server"
 
 import { getUserByClerkIdAction } from "@/actions/db/users-actions"
+import { getUserRolesAction } from "@/actions/db/user-roles-actions"
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 
@@ -19,6 +20,16 @@ export default async function RedirectPage() {
   })
 
   if (userResult.isSuccess && userResult.data?.role === "staff") {
+    // Get user's organizations
+    const rolesResult = await getUserRolesAction(userResult.data.id)
+    if (rolesResult.isSuccess && rolesResult.data.length > 0) {
+      // Sort by most recent and get first org
+      const mostRecentOrg = rolesResult.data.sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      )[0]
+      redirect(`/staff/organizations/${mostRecentOrg.orgId}/tickets`)
+    }
+    // Fallback to tickets if no orgs found
     redirect("/staff/tickets")
   } else {
     redirect("/tenant/tickets")

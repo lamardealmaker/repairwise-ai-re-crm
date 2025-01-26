@@ -34,9 +34,6 @@ export default async function TenantLayout({
 
     return (
       <div className="min-h-screen">
-        <div className="bg-yellow-100 p-2 text-sm">
-          Debug - User Role: {userResult.data?.role || "Error loading role"}
-        </div>
         <DashboardHeader />
         <main>{children}</main>
       </div>
