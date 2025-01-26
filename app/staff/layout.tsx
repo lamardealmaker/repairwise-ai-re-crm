@@ -23,7 +23,7 @@ export default async function StaffLayout({
     !userResult.data ||
     userResult.data.role !== "staff"
   ) {
-    redirect("/tenant/dashboard")
+    redirect("/tenant/tickets")
   }
 
   return (
