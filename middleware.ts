@@ -44,7 +44,6 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     return NextResponse.next()
   }
 
-  // Let the layouts handle role-based access
   return NextResponse.next()
 })
 
