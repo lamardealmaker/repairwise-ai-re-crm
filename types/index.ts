@@ -19,3 +19,6 @@ export * from "./invites-types"
 // Feature Types
 export * from "./tickets-types"
 export * from "./profiles-types"
+
+// Chat Types
+export * from "./chat-types"

@@ -13,7 +13,11 @@ import {
   organizationsTable,
   propertiesTable,
   userRolesTable,
-  invitesTable
+  invitesTable,
+  chatSessionsTable,
+  chatMessagesTable,
+  chatAttachmentsTable,
+  chatTicketsTable
 } from "@/db/schema"
 import { relations } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
@@ -72,6 +76,46 @@ export const invitesRelations = relations(invitesTable, ({ one }) => ({
   })
 }))
 
+export const chatSessionsRelations = relations(
+  chatSessionsTable,
+  ({ one, many }) => ({
+    user: one(usersTable, {
+      fields: [chatSessionsTable.userId],
+      references: [usersTable.id]
+    }),
+    messages: many(chatMessagesTable),
+    tickets: many(chatTicketsTable)
+  })
+)
+
+export const chatMessagesRelations = relations(
+  chatMessagesTable,
+  ({ one, many }) => ({
+    session: one(chatSessionsTable, {
+      fields: [chatMessagesTable.sessionId],
+      references: [chatSessionsTable.id]
+    }),
+    attachments: many(chatAttachmentsTable)
+  })
+)
+
+export const chatAttachmentsRelations = relations(
+  chatAttachmentsTable,
+  ({ one }) => ({
+    message: one(chatMessagesTable, {
+      fields: [chatAttachmentsTable.messageId],
+      references: [chatMessagesTable.id]
+    })
+  })
+)
+
+export const chatTicketsRelations = relations(chatTicketsTable, ({ one }) => ({
+  session: one(chatSessionsTable, {
+    fields: [chatTicketsTable.sessionId],
+    references: [chatSessionsTable.id]
+  })
+}))
+
 const schema = {
   profiles: profilesTable,
   todos: todosTable,
@@ -81,7 +125,11 @@ const schema = {
   organizations: organizationsTable,
   properties: propertiesTable,
   userRoles: userRolesTable,
-  invites: invitesTable
+  invites: invitesTable,
+  chatSessions: chatSessionsTable,
+  chatMessages: chatMessagesTable,
+  chatAttachments: chatAttachmentsTable,
+  chatTickets: chatTicketsTable
 }
 
 export const db = drizzle(client, { schema })
