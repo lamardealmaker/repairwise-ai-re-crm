@@ -13,7 +13,10 @@ import { cn } from "@/lib/utils"
 interface ContextSidebarProps {
   messages: Message[]
   isOpen: boolean
-  onClose?: () => void
+  onClose: () => void
+  ticketSuggestion: TicketSuggestion | null
+  insights: ConversationInsight[]
+  onCreateTicket: () => Promise<void>
 }
 
 interface TicketSuggestion {
@@ -34,12 +37,22 @@ interface ConversationInsight {
 export default function ContextSidebar({
   messages,
   isOpen,
-  onClose
+  onClose,
+  ticketSuggestion: externalTicketSuggestion,
+  insights: externalInsights,
+  onCreateTicket
 }: ContextSidebarProps) {
-  const [ticketSuggestion, setTicketSuggestion] =
-    useState<TicketSuggestion | null>(null)
-  const [insights, setInsights] = useState<ConversationInsight[]>([])
+  const [localTicketSuggestion, setLocalTicketSuggestion] =
+    useState<TicketSuggestion | null>(externalTicketSuggestion)
+  const [localInsights, setLocalInsights] =
+    useState<ConversationInsight[]>(externalInsights)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  // Update local state when external props change
+  useEffect(() => {
+    setLocalTicketSuggestion(externalTicketSuggestion)
+    setLocalInsights(externalInsights)
+  }, [externalTicketSuggestion, externalInsights])
 
   // Analyze conversation when messages change
   useEffect(() => {
@@ -66,10 +79,10 @@ export default function ContextSidebar({
           confidence: 0.85,
           relevantMessageIds: lastThreeMessages.map(m => m.id)
         }
-        setTicketSuggestion(suggestion)
+        setLocalTicketSuggestion(suggestion)
 
         // Mock insights
-        setInsights([
+        setLocalInsights([
           {
             type: "issue",
             content: "User seems to be experiencing technical difficulties",
@@ -165,22 +178,22 @@ export default function ContextSidebar({
                     exit="exit"
                     className="space-y-6"
                   >
-                    {ticketSuggestion && (
+                    {localTicketSuggestion && (
                       <Card className="p-4">
                         <div className="mb-4 flex items-center justify-between">
                           <h3 className="font-semibold">Ticket Suggestion</h3>
                           <Badge
                             variant="secondary"
                             className={cn(
-                              ticketSuggestion.confidence > 0.8
+                              localTicketSuggestion.confidence > 0.8
                                 ? "bg-green-100 text-green-800"
-                                : ticketSuggestion.confidence > 0.6
+                                : localTicketSuggestion.confidence > 0.6
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
                             )}
                           >
-                            {Math.round(ticketSuggestion.confidence * 100)}%
-                            Confidence
+                            {Math.round(localTicketSuggestion.confidence * 100)}
+                            % Confidence
                           </Badge>
                         </div>
 
@@ -190,16 +203,16 @@ export default function ContextSidebar({
                               Title
                             </label>
                             <p className="text-sm font-medium">
-                              {ticketSuggestion.title}
+                              {localTicketSuggestion.title}
                             </p>
                           </div>
 
                           <div className="flex gap-2">
                             <Badge variant="outline" className="capitalize">
-                              {ticketSuggestion.priority} Priority
+                              {localTicketSuggestion.priority} Priority
                             </Badge>
                             <Badge variant="outline">
-                              {ticketSuggestion.category}
+                              {localTicketSuggestion.category}
                             </Badge>
                           </div>
 
@@ -208,11 +221,14 @@ export default function ContextSidebar({
                               Summary
                             </label>
                             <p className="text-sm">
-                              {ticketSuggestion.summary}
+                              {localTicketSuggestion.summary}
                             </p>
                           </div>
 
-                          <Button className="w-full gap-2">
+                          <Button
+                            className="w-full gap-2"
+                            onClick={onCreateTicket}
+                          >
                             <TicketCheck className="size-4" />
                             Create Ticket
                           </Button>
@@ -220,10 +236,10 @@ export default function ContextSidebar({
                       </Card>
                     )}
 
-                    {insights.length > 0 && (
+                    {localInsights.length > 0 && (
                       <div className="space-y-3">
                         <h3 className="font-semibold">Conversation Insights</h3>
-                        {insights.map((insight, index) => (
+                        {localInsights.map((insight, index) => (
                           <Card key={index} className="p-3">
                             <div className="flex items-start gap-3">
                               <Tag className="text-muted-foreground size-4 shrink-0" />

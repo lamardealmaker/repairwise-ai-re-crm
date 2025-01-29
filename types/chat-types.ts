@@ -1,17 +1,24 @@
 export interface Attachment {
   id: string
+  messageId: string
   name: string
-  size: number
   type: string
   url: string
+  size: number
+  metadata?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Message {
   id: string
+  sessionId: string
   content: string
   role: "assistant" | "user"
-  createdAt: string
+  metadata?: string | null
   attachments?: Attachment[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface MessageInputProps {
@@ -21,4 +28,5 @@ export interface MessageInputProps {
 
 export interface MessageThreadProps {
   messages: Message[]
+  messageAlignment?: "default" | "compact"
 }

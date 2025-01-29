@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { AnimatePresence } from "framer-motion"
-import { Message } from "@/types/chat-types"
+import { Message, Attachment } from "@/types/chat-types"
 import { TicketSuggestion, ConversationInsight } from "@/types/ai-types"
 import {
   analyzeConversation,
@@ -16,6 +16,12 @@ import TypingIndicator from "./typing-indicator"
 import FeedbackToast from "./feedback-toast"
 import ChatHeader from "./chat-header"
 import ContextSidebar from "./context-sidebar"
+import {
+  createChatSessionAction,
+  createChatMessageAction,
+  createChatAttachmentAction
+} from "@/actions/db/chat-actions"
+import { useChat } from "ai/react"
 
 interface FeedbackState {
   message: string
@@ -50,8 +56,30 @@ const DEFAULT_SETTINGS: ChatSettings = {
   theme: "system"
 }
 
-export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([])
+interface ChatInterfaceProps {
+  userId: string
+  initialSessionId?: string
+  initialMessages?: Message[]
+}
+
+interface ContextSidebarProps {
+  messages: Message[]
+  isOpen: boolean
+  onClose: () => void
+  ticketSuggestion: TicketSuggestion | null
+  insights: ConversationInsight[]
+  onCreateTicket: () => Promise<void>
+}
+
+export default function ChatInterface({
+  userId,
+  initialSessionId,
+  initialMessages = []
+}: ChatInterfaceProps) {
+  const [sessionId, setSessionId] = useState<string | undefined>(
+    initialSessionId
+  )
+  const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
@@ -108,42 +136,169 @@ export default function ChatInterface() {
         validateFiles(files)
       }
 
-      const attachments = files?.map(file => ({
-        id: Math.random().toString(),
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file)
-      }))
+      let currentSessionId = sessionId
 
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        content,
-        role: "user",
-        createdAt: new Date().toISOString(),
-        attachments
+      // Create session if doesn't exist
+      if (!currentSessionId) {
+        let retries = 3
+        let newSession = null
+
+        while (retries > 0 && !newSession) {
+          const {
+            data,
+            isSuccess,
+            message: errorMessage
+          } = await createChatSessionAction({
+            userId,
+            title: content.slice(0, 50),
+            summary: null
+          })
+
+          if (isSuccess && data) {
+            newSession = data
+            currentSessionId = data.id
+            setSessionId(data.id)
+            break
+          }
+
+          console.error(
+            `Failed to create chat session (${retries} retries left):`,
+            errorMessage
+          )
+          retries--
+
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
+          }
+        }
+
+        if (!newSession || !currentSessionId) {
+          throw new Error(
+            "Failed to create chat session after multiple attempts"
+          )
+        }
       }
 
-      setMessages(prev => [...prev, newMessage])
+      // Create message
+      const {
+        data: newMessage,
+        isSuccess: messageSuccess,
+        message: messageError
+      } = await createChatMessageAction({
+        sessionId: currentSessionId,
+        content,
+        role: "user",
+        metadata: null
+      })
+
+      if (!messageSuccess || !newMessage) {
+        throw new Error(messageError || "Failed to send message")
+      }
+
+      const message: Message = {
+        id: newMessage.id,
+        sessionId: currentSessionId,
+        content: newMessage.content,
+        role: newMessage.role,
+        metadata: newMessage.metadata,
+        attachments: undefined,
+        createdAt: newMessage.createdAt.toISOString(),
+        updatedAt: newMessage.updatedAt.toISOString()
+      }
+
+      // Handle attachments if any
+      if (files?.length) {
+        const attachments = await Promise.all(
+          files.map(async file => {
+            const formData = new FormData()
+            formData.append("file", file)
+
+            // Upload to storage and get URL
+            const uploadedUrl = URL.createObjectURL(file)
+
+            const { data: attachment } = await createChatAttachmentAction({
+              messageId: newMessage.id,
+              name: file.name,
+              type: file.type,
+              url: uploadedUrl,
+              size: file.size,
+              metadata: null
+            })
+
+            if (!attachment) return null
+
+            const validAttachment: Attachment = {
+              id: attachment.id,
+              messageId: attachment.messageId,
+              name: attachment.name,
+              type: attachment.type,
+              url: attachment.url,
+              size: attachment.size,
+              metadata: attachment.metadata || null,
+              createdAt: attachment.createdAt.toISOString(),
+              updatedAt: attachment.updatedAt.toISOString()
+            }
+
+            return validAttachment
+          })
+        )
+
+        message.attachments = attachments.filter(
+          (a): a is Attachment => a !== null
+        )
+      }
+
+      setMessages(prev => [...prev, message])
 
       if (settings.soundEnabled) {
         playSound("send")
       }
 
-      // Simulate AI response
+      // Get AI response
       setIsTyping(true)
       try {
-        // Simulate delay
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const response = (await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: content,
+            sessionId: currentSessionId,
+            userId
+          })
+        })) as Response
 
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          content: "This is a simulated AI response.",
-          role: "assistant",
-          createdAt: new Date().toISOString()
+        if (!response.ok) {
+          throw new Error(`Failed to get AI response: ${response.statusText}`)
         }
 
-        setMessages(prev => [...prev, aiResponse])
+        const { content: aiContent } = await response.json()
+
+        const {
+          data: aiMessage,
+          isSuccess: aiSuccess,
+          message: aiError
+        } = await createChatMessageAction({
+          sessionId: currentSessionId,
+          content: aiContent,
+          role: "assistant",
+          metadata: null
+        })
+
+        if (!aiSuccess || !aiMessage) {
+          throw new Error(aiError || "Failed to save AI response")
+        }
+
+        const aiMessageFormatted: Message = {
+          id: aiMessage.id,
+          sessionId: currentSessionId,
+          content: aiMessage.content,
+          role: aiMessage.role,
+          metadata: aiMessage.metadata,
+          createdAt: aiMessage.createdAt.toISOString(),
+          updatedAt: aiMessage.updatedAt.toISOString()
+        }
+
+        setMessages(prev => [...prev, aiMessageFormatted])
 
         if (settings.soundEnabled) {
           playSound("receive")
@@ -158,11 +313,12 @@ export default function ChatInterface() {
           message: "Message sent successfully"
         })
       } catch (error) {
+        console.error("Error getting AI response:", error)
         setFeedback({
           type: "error",
-          message: "Failed to get AI response"
+          message:
+            error instanceof Error ? error.message : "Failed to get AI response"
         })
-        throw error
       } finally {
         setIsTyping(false)
       }
