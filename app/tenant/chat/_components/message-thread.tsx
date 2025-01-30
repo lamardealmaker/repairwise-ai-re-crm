@@ -6,11 +6,13 @@ import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Download, FileText } from "lucide-react"
-import { Attachment, Message } from "@/types/chat-types"
+import { Attachment, Message, ChatSettings } from "@/types/chat-types"
+import TypingIndicator from "./typing-indicator"
 
-interface MessageThreadProps {
+export interface MessageThreadProps {
   messages: Message[]
-  messageAlignment?: "default" | "compact"
+  isTyping: boolean
+  settings: ChatSettings
 }
 
 const messageVariants = {
@@ -120,7 +122,8 @@ function AttachmentPreview({ attachment }: { attachment: Attachment }) {
 
 export default function MessageThread({
   messages,
-  messageAlignment = "default"
+  isTyping,
+  settings
 }: MessageThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
@@ -130,92 +133,74 @@ export default function MessageThread({
   }, [messages])
 
   return (
-    <ScrollArea className="h-full">
-      <div
-        ref={scrollRef}
-        className={cn(
-          "flex flex-col p-4",
-          messageAlignment === "compact" ? "space-y-2" : "space-y-4"
-        )}
-        role="log"
-        aria-label="Chat messages"
-        aria-live="polite"
-      >
-        <AnimatePresence initial={false}>
-          {messages.map(message => (
-            <motion.div
-              key={message.id}
-              layout
-              variants={messageVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              className={cn(
-                "flex w-full flex-col gap-2",
-                message.role === "user" ? "items-end" : "items-start",
-                messageAlignment === "compact" && "gap-1"
-              )}
-              role="article"
-              aria-label={`${message.role === "user" ? "Your message" : "AI response"}`}
+    <div className="flex-1 overflow-y-auto p-4">
+      <div className="space-y-4">
+        {messages.map(message => (
+          <div
+            key={message.id}
+            className={`flex ${
+              message.role === "assistant" ? "justify-start" : "justify-end"
+            }`}
+          >
+            <div
+              className={`rounded-lg p-4 ${
+                message.role === "assistant"
+                  ? "bg-gray-100"
+                  : "bg-blue-500 text-white"
+              } ${settings.messageAlignment === "right" ? "max-w-[75%]" : ""}`}
             >
-              <motion.div
-                layout
-                className={cn(
-                  "rounded-lg px-4 py-2",
-                  messageAlignment === "compact"
-                    ? "max-w-[90%] px-3 py-1.5"
-                    : "max-w-[80%]",
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                )}
-              >
-                <p
-                  className={cn(
-                    "whitespace-pre-wrap",
-                    messageAlignment === "compact" ? "text-xs" : "text-sm"
-                  )}
-                >
-                  {message.content}
-                </p>
-              </motion.div>
-
+              <div className="whitespace-pre-wrap">{message.content}</div>
               {message.attachments && message.attachments.length > 0 && (
-                <motion.div
-                  layout
-                  className={cn(
-                    "flex flex-col gap-2",
-                    messageAlignment === "compact"
-                      ? "max-w-[90%]"
-                      : "max-w-[80%]"
-                  )}
-                  role="list"
-                  aria-label="Message attachments"
-                >
+                <div className="mt-2 space-y-1">
                   {message.attachments.map(attachment => (
-                    <AttachmentPreview
+                    <div
                       key={attachment.id}
-                      attachment={attachment}
-                    />
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="size-4"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {attachment.name}
+                      </a>
+                    </div>
                   ))}
-                </motion.div>
+                </div>
               )}
-
-              <motion.span
-                layout
-                className={cn(
-                  "text-muted-foreground opacity-70 transition-opacity hover:opacity-100",
-                  messageAlignment === "compact" ? "text-[10px]" : "text-xs"
-                )}
-                aria-label={`Sent at ${new Date(message.createdAt).toLocaleTimeString()}`}
-              >
-                {new Date(message.createdAt).toLocaleTimeString()}
-              </motion.span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        <div ref={endRef} aria-hidden="true" />
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="rounded-lg bg-gray-100 p-4">
+              <div className="flex items-center gap-1">
+                <div className="size-2 animate-bounce rounded-full bg-gray-400" />
+                <div className="size-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0.2s]" />
+                <div className="size-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0.4s]" />
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
       </div>
-    </ScrollArea>
+    </div>
   )
 }

@@ -27,7 +27,7 @@ interface ChatSettings {
   notificationsEnabled: boolean
   autoScroll: boolean
   messageAlignment: "default" | "compact"
-  aiModel: "gpt-3.5" | "gpt-4"
+  aiModel: "gpt-4o" | "gpt-4o"
   theme: "light" | "dark" | "system"
 }
 
@@ -142,7 +142,7 @@ export default function ChatSettings({
             <Select
               value={settings.aiModel}
               onValueChange={value =>
-                updateSetting("aiModel", value as "gpt-3.5" | "gpt-4")
+                updateSetting("aiModel", value as "gpt-4o")
               }
             >
               <SelectTrigger className="w-32">

@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { AnimatePresence } from "framer-motion"
-import { Message, Attachment } from "@/types/chat-types"
-import { TicketSuggestion, ConversationInsight } from "@/types/ai-types"
+import { Message, Attachment, ChatSettings } from "@/types/chat-types"
+import {
+  TicketSuggestion,
+  ConversationInsight,
+  ContextWindow
+} from "@/types/ai-types"
 import {
   analyzeConversation,
   generateTicketDraft,
@@ -19,22 +23,19 @@ import ContextSidebar from "./context-sidebar"
 import {
   createChatSessionAction,
   createChatMessageAction,
-  createChatAttachmentAction
+  createChatAttachmentAction,
+  getChatMessagesAction
 } from "@/actions/db/chat-actions"
 import { useChat } from "ai/react"
+import { sendMessageAction } from "@/actions/chat-actions"
+import {
+  getContextAction,
+  updateContextAction
+} from "@/actions/context-actions"
 
 interface FeedbackState {
   message: string
   type: "error" | "success" | "info"
-}
-
-interface ChatSettings {
-  soundEnabled: boolean
-  notificationsEnabled: boolean
-  autoScroll: boolean
-  messageAlignment: "default" | "compact"
-  aiModel: "gpt-3.5" | "gpt-4"
-  theme: "light" | "dark" | "system"
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -47,13 +48,19 @@ const ALLOWED_FILE_TYPES = [
   "text/plain"
 ]
 
-const DEFAULT_SETTINGS: ChatSettings = {
+const defaultSettings: ChatSettings = {
+  enableContext: true,
+  enableAttachments: true,
+  enableSuggestions: true,
+  maxAttachments: 5,
+  maxAttachmentSize: 5 * 1024 * 1024, // 5MB
+  allowedAttachmentTypes: ["image/*", "application/pdf"],
   soundEnabled: true,
   notificationsEnabled: true,
   autoScroll: true,
-  messageAlignment: "default",
-  aiModel: "gpt-3.5",
-  theme: "system"
+  messageAlignment: "left",
+  theme: "system",
+  aiModel: "gpt-4o-2024-08-06"
 }
 
 interface ChatInterfaceProps {
@@ -84,10 +91,16 @@ export default function ChatInterface({
   const [isTyping, setIsTyping] = useState(false)
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState<ChatSettings>(defaultSettings)
   const [ticketSuggestion, setTicketSuggestion] =
     useState<TicketSuggestion | null>(null)
   const [insights, setInsights] = useState<ConversationInsight[]>([])
+  const [context, setContext] = useState<ContextWindow>({
+    shortTerm: [],
+    longTerm: [],
+    metadata: {},
+    summary: ""
+  })
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -96,6 +109,11 @@ export default function ChatInterface({
       setSettings(JSON.parse(savedSettings))
     }
   }, [])
+
+  // Debug: Log messages when they change
+  useEffect(() => {
+    console.log("Current messages state:", messages)
+  }, [messages])
 
   // Save settings to localStorage when they change
   useEffect(() => {
@@ -106,14 +124,53 @@ export default function ChatInterface({
   useEffect(() => {
     const analyze = async () => {
       if (messages.length >= 3) {
-        const { ticketSuggestion, insights } =
-          await analyzeConversation(messages)
+        const {
+          ticketSuggestion,
+          insights,
+          context: newContext
+        } = await analyzeConversation(messages)
         setTicketSuggestion(ticketSuggestion)
         setInsights(insights)
+        setContext(newContext)
       }
     }
     analyze()
   }, [messages])
+
+  // Load messages from database when session exists
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (sessionId) {
+        console.log("Loading messages for session:", sessionId)
+        const result = await getChatMessagesAction(sessionId)
+        if (result.isSuccess) {
+          const formattedMessages = result.data
+            .sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+            )
+            .map(msg => ({
+              id: msg.id,
+              sessionId: msg.sessionId,
+              content: msg.content,
+              role: msg.role,
+              createdAt: msg.createdAt.toISOString(),
+              updatedAt: msg.updatedAt.toISOString()
+            }))
+          console.log("Loaded messages:", {
+            count: formattedMessages.length,
+            firstMessage: formattedMessages[0]?.content.slice(0, 50),
+            lastMessage: formattedMessages[
+              formattedMessages.length - 1
+            ]?.content.slice(0, 50)
+          })
+          setMessages(formattedMessages)
+        }
+      }
+    }
+    loadMessages()
+  }, [sessionId])
 
   const validateFiles = (files: File[]) => {
     if (files.length > MAX_FILES) {
@@ -131,196 +188,128 @@ export default function ChatInterface({
   }
 
   const handleSendMessage = async (content: string, files?: File[]) => {
-    try {
-      if (files?.length) {
-        validateFiles(files)
-      }
+    if (!userId || !content.trim()) return
 
+    try {
       let currentSessionId = sessionId
+
+      console.log("Starting message send with history:", {
+        existingMessages: messages.length,
+        newContent: content.slice(0, 50)
+      })
 
       // Create session if doesn't exist
       if (!currentSessionId) {
-        let retries = 3
-        let newSession = null
+        const { data: newSession, isSuccess } = await createChatSessionAction({
+          userId,
+          title: content.slice(0, 50)
+        })
 
-        while (retries > 0 && !newSession) {
-          const {
-            data,
-            isSuccess,
-            message: errorMessage
-          } = await createChatSessionAction({
-            userId,
-            title: content.slice(0, 50),
-            summary: null
-          })
-
-          if (isSuccess && data) {
-            newSession = data
-            currentSessionId = data.id
-            setSessionId(data.id)
-            break
-          }
-
-          console.error(
-            `Failed to create chat session (${retries} retries left):`,
-            errorMessage
-          )
-          retries--
-
-          if (retries > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
-          }
-        }
-
-        if (!newSession || !currentSessionId) {
-          throw new Error(
-            "Failed to create chat session after multiple attempts"
-          )
+        if (isSuccess && newSession) {
+          currentSessionId = newSession.id
+          setSessionId(newSession.id)
+        } else {
+          throw new Error("Failed to create chat session")
         }
       }
 
-      // Create message
-      const {
-        data: newMessage,
-        isSuccess: messageSuccess,
-        message: messageError
-      } = await createChatMessageAction({
-        sessionId: currentSessionId,
-        content,
-        role: "user",
-        metadata: null
-      })
+      // Create user message in DB
+      const { data: newMessage, isSuccess: messageSuccess } =
+        await createChatMessageAction({
+          sessionId: currentSessionId,
+          content,
+          role: "user"
+        })
 
       if (!messageSuccess || !newMessage) {
-        throw new Error(messageError || "Failed to send message")
+        throw new Error("Failed to send message")
       }
 
-      const message: Message = {
+      // Create message object
+      const userMessage: Message = {
         id: newMessage.id,
         sessionId: currentSessionId,
         content: newMessage.content,
         role: newMessage.role,
-        metadata: newMessage.metadata,
-        attachments: undefined,
         createdAt: newMessage.createdAt.toISOString(),
         updatedAt: newMessage.updatedAt.toISOString()
       }
 
-      // Handle attachments if any
-      if (files?.length) {
-        const attachments = await Promise.all(
-          files.map(async file => {
-            const formData = new FormData()
-            formData.append("file", file)
+      // Update messages state with user message
+      const updatedMessages = [...messages, userMessage]
+      setMessages(updatedMessages)
 
-            // Upload to storage and get URL
-            const uploadedUrl = URL.createObjectURL(file)
+      // Log the current conversation state
+      console.log("Current conversation state:", {
+        messageCount: updatedMessages.length,
+        lastUserMessage: userMessage.content.slice(0, 50)
+      })
 
-            const { data: attachment } = await createChatAttachmentAction({
-              messageId: newMessage.id,
-              name: file.name,
-              type: file.type,
-              url: uploadedUrl,
-              size: file.size,
-              metadata: null
-            })
-
-            if (!attachment) return null
-
-            const validAttachment: Attachment = {
-              id: attachment.id,
-              messageId: attachment.messageId,
-              name: attachment.name,
-              type: attachment.type,
-              url: attachment.url,
-              size: attachment.size,
-              metadata: attachment.metadata || null,
-              createdAt: attachment.createdAt.toISOString(),
-              updatedAt: attachment.updatedAt.toISOString()
-            }
-
-            return validAttachment
-          })
-        )
-
-        message.attachments = attachments.filter(
-          (a): a is Attachment => a !== null
-        )
+      // Update context with user message
+      const contextResult = await updateContextAction(userMessage)
+      if (contextResult.isSuccess) {
+        setContext(contextResult.data)
       }
 
-      setMessages(prev => [...prev, message])
-
-      if (settings.soundEnabled) {
-        playSound("send")
-      }
-
-      // Get AI response
+      // Send message to AI and get response
       setIsTyping(true)
-      try {
-        const response = (await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: content,
+      const result = await sendMessageAction(content, updatedMessages, files)
+      setIsTyping(false)
+
+      if (result.isSuccess) {
+        // Create AI message in DB
+        const { data: aiMessage } = await createChatMessageAction({
+          sessionId: currentSessionId,
+          content: result.data.message.content,
+          role: "assistant"
+        })
+
+        if (aiMessage) {
+          // Add AI response to messages state
+          const formattedAiMessage: Message = {
+            id: aiMessage.id,
             sessionId: currentSessionId,
-            userId
+            content: aiMessage.content,
+            role: aiMessage.role,
+            createdAt: aiMessage.createdAt.toISOString(),
+            updatedAt: aiMessage.updatedAt.toISOString()
+          }
+
+          // Update messages with AI response
+          const messagesWithAiResponse = [
+            ...updatedMessages,
+            formattedAiMessage
+          ]
+          setMessages(messagesWithAiResponse)
+
+          // Log the final conversation state
+          console.log("Final conversation state:", {
+            totalMessages: messagesWithAiResponse.length,
+            lastAiResponse: formattedAiMessage.content.slice(0, 50)
           })
-        })) as Response
 
-        if (!response.ok) {
-          throw new Error(`Failed to get AI response: ${response.statusText}`)
+          // Update context with AI response
+          const aiContextResult = await updateContextAction(formattedAiMessage)
+          if (aiContextResult.isSuccess) {
+            setContext(aiContextResult.data)
+          }
+
+          // Update suggestions and insights
+          if (result.data.ticketSuggestion) {
+            setTicketSuggestion(result.data.ticketSuggestion)
+          }
+          if (result.data.insights) {
+            setInsights(result.data.insights)
+          }
+
+          if (settings.soundEnabled) {
+            playSound("receive")
+          }
+
+          if (settings.notificationsEnabled) {
+            showNotification("New message received")
+          }
         }
-
-        const { content: aiContent } = await response.json()
-
-        const {
-          data: aiMessage,
-          isSuccess: aiSuccess,
-          message: aiError
-        } = await createChatMessageAction({
-          sessionId: currentSessionId,
-          content: aiContent,
-          role: "assistant",
-          metadata: null
-        })
-
-        if (!aiSuccess || !aiMessage) {
-          throw new Error(aiError || "Failed to save AI response")
-        }
-
-        const aiMessageFormatted: Message = {
-          id: aiMessage.id,
-          sessionId: currentSessionId,
-          content: aiMessage.content,
-          role: aiMessage.role,
-          metadata: aiMessage.metadata,
-          createdAt: aiMessage.createdAt.toISOString(),
-          updatedAt: aiMessage.updatedAt.toISOString()
-        }
-
-        setMessages(prev => [...prev, aiMessageFormatted])
-
-        if (settings.soundEnabled) {
-          playSound("receive")
-        }
-
-        if (settings.notificationsEnabled) {
-          showNotification("New message received")
-        }
-
-        setFeedback({
-          type: "success",
-          message: "Message sent successfully"
-        })
-      } catch (error) {
-        console.error("Error getting AI response:", error)
-        setFeedback({
-          type: "error",
-          message:
-            error instanceof Error ? error.message : "Failed to get AI response"
-        })
-      } finally {
-        setIsTyping(false)
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -384,15 +373,13 @@ export default function ChatInterface({
 
     try {
       const response = await generateTicketDraft(messages, ticketSuggestion)
-      const reader = response.body?.getReader()
+      const reader = response.getReader()
       let description = ""
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          description += new TextDecoder().decode(value)
-        }
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        description += new TextDecoder().decode(value)
       }
 
       // Here you would integrate with your ticketing system
@@ -422,63 +409,43 @@ export default function ChatInterface({
   }
 
   return (
-    <div className="bg-background flex size-full flex-col">
-      <ChatHeader
-        onToggleSidebar={toggleSidebar}
-        isSidebarOpen={isSidebarOpen}
-        onClearHistory={handleClearHistory}
-        onExportChat={handleExportChat}
-        onCreateTicket={handleCreateTicket}
-        settings={settings}
-        onSettingsChange={handleSettingsChange}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-hidden">
-          <AnimatePresence mode="wait">
-            {isLoading ? (
-              <div className="p-4">
-                <MessageSkeleton />
-              </div>
-            ) : (
-              <MessageThread
-                messages={messages}
-                messageAlignment={settings.messageAlignment}
-              />
-            )}
-          </AnimatePresence>
-        </div>
-
-        <ContextSidebar
-          messages={messages}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          ticketSuggestion={ticketSuggestion}
-          insights={insights}
-          onCreateTicket={handleCreateTicket}
+    <div className="flex h-full">
+      <div className="flex-1">
+        <ChatHeader
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+          context={context}
         />
-      </div>
 
-      <div className="bg-background border-t p-4">
+        <MessageThread
+          messages={messages}
+          isTyping={isTyping}
+          settings={settings}
+        />
+
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          isTyping={isTyping}
+          settings={settings}
+        />
+
         <AnimatePresence>
-          {isTyping && (
-            <div className="mb-2">
-              <TypingIndicator />
-            </div>
+          {feedback && (
+            <FeedbackToast
+              message={feedback.message}
+              type={feedback.type}
+              onClose={() => setFeedback(null)}
+            />
           )}
         </AnimatePresence>
-        <MessageInput onSendMessage={handleSendMessage} disabled={isTyping} />
       </div>
 
-      <AnimatePresence>
-        {feedback && (
-          <FeedbackToast
-            message={feedback.message}
-            type={feedback.type}
-            onDismiss={dismissFeedback}
-          />
-        )}
-      </AnimatePresence>
+      <ContextSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        ticketSuggestion={ticketSuggestion}
+        insights={insights}
+        context={context}
+      />
     </div>
   )
 }

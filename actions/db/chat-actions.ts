@@ -18,24 +18,52 @@ import {
 import { ActionState } from "@/types"
 import { eq, desc } from "drizzle-orm"
 
+interface CreateChatSessionParams {
+  userId: string
+  title: string
+}
+
+interface CreateChatMessageParams {
+  sessionId: string
+  content: string
+  role: "user" | "assistant"
+}
+
+interface CreateChatAttachmentParams {
+  messageId: string
+  name: string
+  type: string
+  url: string
+  size: number
+  metadata: string | null
+}
+
 // Chat Sessions
 export async function createChatSessionAction(
-  session: InsertChatSession
+  params: CreateChatSessionParams
 ): Promise<ActionState<SelectChatSession>> {
   try {
-    const [newSession] = await db
+    console.log("Creating chat session:", params)
+    const [session] = await db
       .insert(chatSessionsTable)
-      .values(session)
+      .values({
+        userId: params.userId,
+        title: params.title
+      })
       .returning()
 
+    console.log("Created chat session:", session)
     return {
       isSuccess: true,
       message: "Chat session created successfully",
-      data: newSession
+      data: session
     }
   } catch (error) {
     console.error("Error creating chat session:", error)
-    return { isSuccess: false, message: "Failed to create chat session" }
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to create chat session"
+    }
   }
 }
 
@@ -43,15 +71,14 @@ export async function getChatSessionsAction(
   userId: string
 ): Promise<ActionState<SelectChatSession[]>> {
   try {
-    const sessions = await db.query.chatSessions.findMany({
-      where: eq(chatSessionsTable.userId, userId),
-      orderBy: desc(chatSessionsTable.updatedAt),
-      with: {
-        messages: true,
-        tickets: true
-      }
-    })
+    console.log("Getting chat sessions for user:", userId)
+    const sessions = await db
+      .select()
+      .from(chatSessionsTable)
+      .where(eq(chatSessionsTable.userId, userId))
+      .orderBy(chatSessionsTable.createdAt)
 
+    console.log("Found chat sessions:", sessions)
     return {
       isSuccess: true,
       message: "Chat sessions retrieved successfully",
@@ -59,28 +86,40 @@ export async function getChatSessionsAction(
     }
   } catch (error) {
     console.error("Error getting chat sessions:", error)
-    return { isSuccess: false, message: "Failed to get chat sessions" }
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to get chat sessions"
+    }
   }
 }
 
 // Chat Messages
 export async function createChatMessageAction(
-  message: InsertChatMessage
+  params: CreateChatMessageParams
 ): Promise<ActionState<SelectChatMessage>> {
   try {
-    const [newMessage] = await db
+    console.log("Creating chat message:", params)
+    const [message] = await db
       .insert(chatMessagesTable)
-      .values(message)
+      .values({
+        sessionId: params.sessionId,
+        content: params.content,
+        role: params.role
+      })
       .returning()
 
+    console.log("Created chat message:", message)
     return {
       isSuccess: true,
-      message: "Message sent successfully",
-      data: newMessage
+      message: "Message created successfully",
+      data: message
     }
   } catch (error) {
     console.error("Error creating chat message:", error)
-    return { isSuccess: false, message: "Failed to send message" }
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to create message"
+    }
   }
 }
 
@@ -88,43 +127,58 @@ export async function getChatMessagesAction(
   sessionId: string
 ): Promise<ActionState<SelectChatMessage[]>> {
   try {
-    const messages = await db.query.chatMessages.findMany({
-      where: eq(chatMessagesTable.sessionId, sessionId),
-      orderBy: desc(chatMessagesTable.createdAt),
-      with: {
-        attachments: true
-      }
-    })
+    console.log("Getting chat messages for session:", sessionId)
+    const messages = await db
+      .select()
+      .from(chatMessagesTable)
+      .where(eq(chatMessagesTable.sessionId, sessionId))
+      .orderBy(chatMessagesTable.createdAt)
 
+    console.log("Found chat messages:", messages)
     return {
       isSuccess: true,
-      message: "Messages retrieved successfully",
+      message: "Chat messages retrieved successfully",
       data: messages
     }
   } catch (error) {
     console.error("Error getting chat messages:", error)
-    return { isSuccess: false, message: "Failed to get messages" }
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to get chat messages"
+    }
   }
 }
 
 // Chat Attachments
 export async function createChatAttachmentAction(
-  attachment: InsertChatAttachment
+  params: CreateChatAttachmentParams
 ): Promise<ActionState<SelectChatAttachment>> {
   try {
-    const [newAttachment] = await db
+    console.log("Creating chat attachment:", params)
+    const [attachment] = await db
       .insert(chatAttachmentsTable)
-      .values(attachment)
+      .values({
+        messageId: params.messageId,
+        name: params.name,
+        type: params.type,
+        url: params.url,
+        size: params.size,
+        metadata: params.metadata
+      })
       .returning()
 
+    console.log("Created chat attachment:", attachment)
     return {
       isSuccess: true,
-      message: "Attachment uploaded successfully",
-      data: newAttachment
+      message: "Attachment created successfully",
+      data: attachment
     }
   } catch (error) {
     console.error("Error creating chat attachment:", error)
-    return { isSuccess: false, message: "Failed to upload attachment" }
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to create attachment"
+    }
   }
 }
 

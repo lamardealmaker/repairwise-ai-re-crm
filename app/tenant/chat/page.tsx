@@ -1,61 +1,133 @@
-"use server"
+"use client"
 
-import { auth } from "@clerk/nextjs/server"
-import { redirect } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useAuth } from "@clerk/nextjs"
+import { Message } from "@/types/chat-types"
 import {
-  getChatSessionsAction,
-  getChatMessagesAction
-} from "@/actions/db/chat-actions"
-import ChatInterface from "./_components/chat-interface"
-import { Message, Attachment } from "@/types/chat-types"
-import { SelectChatMessage, SelectChatAttachment } from "@/db/schema"
+  ContextWindow,
+  TicketSuggestion,
+  ConversationInsight
+} from "@/types/ai-types"
+import { sendMessageAction } from "@/actions/chat-actions"
+import {
+  getContextAction,
+  updateContextAction
+} from "@/actions/context-actions"
+import ChatHeader from "./_components/chat-header"
+import MessageThread from "./_components/message-thread"
+import MessageInput from "./_components/message-input"
+import ContextSidebar from "./_components/context-sidebar"
 
-export default async function ChatPage() {
-  const session = await auth()
-  if (!session?.userId) redirect("/login")
+const defaultSettings = {
+  enableContext: true,
+  enableAttachments: true,
+  enableSuggestions: true,
+  maxAttachments: 5,
+  maxAttachmentSize: 5 * 1024 * 1024, // 5MB
+  allowedAttachmentTypes: ["image/*", "application/pdf"]
+}
 
-  const { data: sessions } = await getChatSessionsAction(session.userId)
-  const activeSession = sessions?.[0]
+export default function ChatPage() {
+  const { userId } = useAuth()
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isTyping, setIsTyping] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [context, setContext] = useState<ContextWindow>({
+    shortTerm: [],
+    longTerm: [],
+    metadata: {},
+    summary: ""
+  })
+  const [ticketSuggestion, setTicketSuggestion] =
+    useState<TicketSuggestion | null>(null)
+  const [insights, setInsights] = useState<ConversationInsight[]>([])
 
-  let messages: Message[] = []
-  if (activeSession?.id) {
-    const { data: fetchedMessages } = await getChatMessagesAction(
-      activeSession.id
-    )
-    if (fetchedMessages) {
-      messages = fetchedMessages.map(
-        (
-          msg: SelectChatMessage & { attachments?: SelectChatAttachment[] }
-        ) => ({
-          id: msg.id,
-          sessionId: msg.sessionId,
-          content: msg.content,
-          role: msg.role,
-          metadata: msg.metadata,
-          createdAt: msg.createdAt.toISOString(),
-          updatedAt: msg.updatedAt.toISOString(),
-          attachments: msg.attachments?.map((att: SelectChatAttachment) => ({
-            id: att.id,
-            messageId: att.messageId,
-            name: att.name,
-            type: att.type,
-            url: att.url,
-            size: att.size,
-            metadata: att.metadata,
-            createdAt: att.createdAt.toISOString(),
-            updatedAt: att.updatedAt.toISOString()
-          }))
-        })
-      )
+  useEffect(() => {
+    if (userId) {
+      loadInitialContext()
+    }
+  }, [userId])
+
+  const loadInitialContext = async () => {
+    if (!userId) return
+    const result = await getContextAction()
+    if (result.isSuccess) {
+      setContext(result.data)
+    }
+  }
+
+  const handleSendMessage = async (content: string, attachments?: File[]) => {
+    if (!userId || !content.trim()) return
+
+    // Add user message
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      sessionId: "current-session",
+      content,
+      role: "user",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    setMessages(prev => [...prev, userMessage])
+
+    // Update context with user message
+    const contextResult = await updateContextAction(userMessage)
+    if (contextResult.isSuccess) {
+      setContext(contextResult.data)
+    }
+
+    // Send message to AI
+    setIsTyping(true)
+    const result = await sendMessageAction(content, attachments)
+    setIsTyping(false)
+
+    if (result.isSuccess) {
+      // Add AI response
+      setMessages(prev => [...prev, result.data.message])
+
+      // Update context with AI response
+      const aiContextResult = await updateContextAction(result.data.message)
+      if (aiContextResult.isSuccess) {
+        setContext(aiContextResult.data)
+      }
+
+      // Update suggestions and insights
+      if (result.data.ticketSuggestion) {
+        setTicketSuggestion(result.data.ticketSuggestion)
+      }
+      if (result.data.insights) {
+        setInsights(result.data.insights)
+      }
     }
   }
 
   return (
-    <div className="flex size-full flex-col">
-      <ChatInterface
-        userId={session.userId}
-        initialSessionId={activeSession?.id}
-        initialMessages={messages}
+    <div className="flex h-screen">
+      <div className="flex flex-1 flex-col">
+        <ChatHeader
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+          context={context}
+        />
+
+        <MessageThread
+          messages={messages}
+          isTyping={isTyping}
+          settings={defaultSettings}
+        />
+
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          isTyping={isTyping}
+          settings={defaultSettings}
+        />
+      </div>
+
+      <ContextSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        ticketSuggestion={ticketSuggestion}
+        insights={insights}
+        context={context}
       />
     </div>
   )

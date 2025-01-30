@@ -67,6 +67,7 @@
     "lucide-react": "^0.436.0",
     "next": "^15.0.3",
     "next-themes": "^0.3.0",
+    "openai": "^4.81.0",
     "openai-edge": "^1.2.2",
     "postgres": "^3.4.4",
     "posthog-js": "^1.201.0",

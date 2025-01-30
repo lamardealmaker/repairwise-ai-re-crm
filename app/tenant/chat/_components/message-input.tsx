@@ -1,158 +1,129 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { SendHorizontal, Paperclip, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { MessageInputProps } from "@/types/chat-types"
-import FileUpload from "./file-upload"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover"
+import { useState, useRef } from "react"
+import { ChatSettings } from "@/types/chat-types"
+
+export interface MessageInputProps {
+  onSendMessage: (content: string, files?: File[]) => Promise<void>
+  isTyping: boolean
+  settings: ChatSettings
+}
 
 export default function MessageInput({
   onSendMessage,
-  disabled
+  isTyping,
+  settings
 }: MessageInputProps) {
   const [message, setMessage] = useState("")
   const [files, setFiles] = useState<File[]>([])
-  const [isUploadOpen, setIsUploadOpen] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    // Focus textarea on mount
-    textareaRef.current?.focus()
-  }, [])
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if ((!message.trim() && files.length === 0) || disabled) return
+    if (!message.trim() && files.length === 0) return
 
-    onSendMessage(message, files)
-    setMessage("")
-    setFiles([])
-    setIsUploadOpen(false)
-    textareaRef.current?.focus()
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey && !disabled) {
-      e.preventDefault()
-      handleSubmit(e)
+    try {
+      await onSendMessage(message, files)
+      setMessage("")
+      setFiles([])
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    } catch (error) {
+      console.error("Error sending message:", error)
     }
   }
 
-  const handleFileSelect = (newFiles: File[]) => {
-    setFiles(prev => [...prev, ...newFiles])
-    setIsUploadOpen(false)
-    textareaRef.current?.focus()
-  }
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const handleFileKeyDown = (e: React.KeyboardEvent, index: number) => {
-    if (e.key === "Delete" || e.key === "Backspace") {
-      removeFile(index)
-    }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || [])
+    setFiles(selectedFiles)
   }
 
   return (
-    <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="border-t p-4">
       {files.length > 0 && (
-        <div
-          className="flex flex-wrap gap-2"
-          role="list"
-          aria-label="Selected files"
-        >
+        <div className="mb-2 flex flex-wrap gap-2">
           {files.map((file, index) => (
             <div
               key={index}
-              className="bg-muted flex items-center gap-2 rounded-full px-3 py-1 text-sm"
-              role="listitem"
-              tabIndex={0}
-              onKeyDown={e => handleFileKeyDown(e, index)}
-              aria-label={`${file.name}, press Delete or Backspace to remove`}
+              className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1 text-sm"
             >
-              <span className="max-w-[150px] truncate" title={file.name}>
-                {file.name}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-4 p-0"
-                onClick={() => removeFile(index)}
-                aria-label={`Remove ${file.name}`}
+              <span>{file.name}</span>
+              <button
+                type="button"
+                onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                className="text-gray-500 hover:text-gray-700"
               >
-                <X className="size-3" aria-hidden="true" />
-              </Button>
+                ×
+              </button>
             </div>
           ))}
         </div>
       )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="flex space-x-2"
-        aria-label="Message input form"
-      >
-        <Popover open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="shrink-0"
-              disabled={disabled}
-              aria-label="Attach files"
-            >
-              <Paperclip className="size-5" aria-hidden="true" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-80 p-3"
-            side="top"
-            align="start"
-            alignOffset={-40}
+      <div className="flex gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          multiple
+          className="hidden"
+          accept="image/jpeg,image/png,image/gif,application/pdf,text/plain"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center justify-center rounded-lg p-2 hover:bg-gray-100"
+          disabled={isTyping}
+        >
+          <span className="sr-only">Attach files</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-6"
           >
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              disabled={disabled}
-              maxFiles={5}
-              maxSize={5 * 1024 * 1024} // 5MB
-            />
-          </PopoverContent>
-        </Popover>
-
-        <Textarea
-          ref={textareaRef}
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </button>
+        <input
+          type="text"
           value={message}
           onChange={e => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          className="min-h-[60px] flex-1 resize-none"
-          disabled={disabled}
-          aria-label="Message input"
-          aria-multiline="true"
-          aria-describedby="message-help"
+          placeholder={isTyping ? "AI is typing..." : "Type a message"}
+          className="flex-1 rounded-lg border px-4 py-2 focus:border-blue-500 focus:outline-none"
+          disabled={isTyping}
         />
-
-        <Button
+        <button
           type="submit"
-          size="icon"
-          disabled={(!message.trim() && files.length === 0) || disabled}
-          className="shrink-0"
-          aria-label="Send message"
+          className="flex items-center justify-center rounded-lg bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:opacity-50"
+          disabled={isTyping || (!message.trim() && files.length === 0)}
         >
-          <SendHorizontal className="size-5" aria-hidden="true" />
-        </Button>
-      </form>
-      <span id="message-help" className="sr-only">
-        Press Enter to send, Shift + Enter for new line
-      </span>
-    </div>
+          <span className="sr-only">Send message</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-6"
+          >
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
+        </button>
+      </div>
+    </form>
   )
 }
