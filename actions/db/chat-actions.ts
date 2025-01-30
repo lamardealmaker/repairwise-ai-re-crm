@@ -6,6 +6,7 @@ import {
   chatMessagesTable,
   chatAttachmentsTable,
   chatTicketsTable,
+  chatContextTable,
   InsertChatSession,
   InsertChatMessage,
   InsertChatAttachment,
@@ -13,10 +14,12 @@ import {
   SelectChatSession,
   SelectChatMessage,
   SelectChatAttachment,
-  SelectChatTicket
+  SelectChatTicket,
+  SelectChatContext
 } from "@/db/schema"
 import { ActionState } from "@/types"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, sql } from "drizzle-orm"
+import { ContextWindow } from "@/types/ai-types"
 
 interface CreateChatSessionParams {
   userId: string
@@ -104,7 +107,8 @@ export async function createChatMessageAction(
       .values({
         sessionId: params.sessionId,
         content: params.content,
-        role: params.role
+        role: params.role,
+        metadata: {} // Empty JSONB object
       })
       .returning()
 
@@ -222,5 +226,75 @@ export async function updateChatTicketAction(
   } catch (error) {
     console.error("Error updating chat ticket:", error)
     return { isSuccess: false, message: "Failed to update ticket" }
+  }
+}
+
+// Chat Context
+export async function updateChatContextAction(
+  sessionId: string,
+  context: Partial<ContextWindow>
+): Promise<ActionState<SelectChatContext>> {
+  try {
+    console.log("Updating chat context:", { 
+      sessionId, 
+      context: {
+        shortTerm: context.shortTerm ? JSON.stringify(context.shortTerm) : undefined,
+        longTerm: context.longTerm ? JSON.stringify(context.longTerm) : undefined,
+        metadata: context.metadata,
+        summary: context.summary
+      }
+    })
+    
+    // First try to get existing context
+    const [existingContext] = await db
+      .select()
+      .from(chatContextTable)
+      .where(eq(chatContextTable.sessionId, sessionId))
+    
+    if (existingContext) {
+      // Update existing context
+      const [updatedContext] = await db
+        .update(chatContextTable)
+        .set({
+          shortTerm: context.shortTerm ? sql`${JSON.stringify(context.shortTerm)}::jsonb` : undefined,
+          longTerm: context.longTerm ? sql`${JSON.stringify(context.longTerm)}::jsonb` : undefined,
+          metadata: context.metadata ? sql`${JSON.stringify(context.metadata)}::jsonb` : undefined,
+          summary: context.summary
+        })
+        .where(eq(chatContextTable.sessionId, sessionId))
+        .returning()
+
+      console.log("Updated existing chat context:", updatedContext)
+      return {
+        isSuccess: true,
+        message: "Chat context updated successfully",
+        data: updatedContext
+      }
+    } else {
+      // Create new context with proper typing
+      const [newContext] = await db
+        .insert(chatContextTable)
+        .values({
+          sessionId,
+          shortTerm: sql`${JSON.stringify(context.shortTerm || [])}::jsonb`,
+          longTerm: sql`${JSON.stringify(context.longTerm || [])}::jsonb`,
+          metadata: sql`${JSON.stringify(context.metadata || {})}::jsonb`,
+          summary: context.summary
+        })
+        .returning()
+
+      console.log("Created new chat context:", newContext)
+      return {
+        isSuccess: true,
+        message: "Chat context created successfully",
+        data: newContext
+      }
+    }
+  } catch (error) {
+    console.error("Error updating chat context:", error)
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to update chat context"
+    }
   }
 } 

@@ -1,18 +1,14 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, uuid, jsonb } from "drizzle-orm/pg-core"
 import { chatSessionsTable } from "./chat-sessions-schema"
 
-// Create enum first
-export const roleEnum = pgEnum("role", ["assistant", "user"])
-
-// Then create table using the enum
 export const chatMessagesTable = pgTable("chat_messages", {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .references(() => chatSessionsTable.id, { onDelete: "cascade" })
     .notNull(),
   content: text("content").notNull(),
-  role: roleEnum("role").notNull(),
-  metadata: text("metadata"),
+  role: text("role").notNull().$type<"user" | "assistant">(),
+  metadata: jsonb("metadata").default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

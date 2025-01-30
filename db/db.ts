@@ -17,7 +17,8 @@ import {
   chatSessionsTable,
   chatMessagesTable,
   chatAttachmentsTable,
-  chatTicketsTable
+  chatTicketsTable,
+  chatContextTable
 } from "@/db/schema"
 import { relations } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/postgres-js"
@@ -129,7 +130,8 @@ const schema = {
   chatSessions: chatSessionsTable,
   chatMessages: chatMessagesTable,
   chatAttachments: chatAttachmentsTable,
-  chatTickets: chatTicketsTable
+  chatTickets: chatTicketsTable,
+  chatContext: chatContextTable
 }
 
 export const db = drizzle(client, { schema })

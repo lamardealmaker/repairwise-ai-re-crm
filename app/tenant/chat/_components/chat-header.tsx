@@ -1,14 +1,23 @@
 "use client"
 
 import { ContextWindow } from "@/types/ai-types"
+import { ChatSettings } from "@/types/chat-types"
 
 export interface ChatHeaderProps {
   onOpenSidebar: () => void
-  context: ContextWindow
+  onClearHistory: () => Promise<string>
+  onExportChat: () => void
+  settings: ChatSettings
+  onSettingsChange: (newSettings: Partial<ChatSettings>) => void
+  context?: ContextWindow
 }
 
 export default function ChatHeader({
   onOpenSidebar,
+  onClearHistory,
+  onExportChat,
+  settings,
+  onSettingsChange,
   context
 }: ChatHeaderProps) {
   return (
@@ -39,10 +48,56 @@ export default function ChatHeader({
         </button>
         <div>
           <h1 className="text-lg font-semibold">Chat Assistant</h1>
-          {context.summary && (
+          {context?.summary && (
             <p className="text-sm text-gray-500">{context.summary}</p>
           )}
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onClearHistory}
+          className="rounded-lg p-2 hover:bg-gray-100"
+        >
+          <span className="sr-only">Clear chat history</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-6"
+          >
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+          </svg>
+        </button>
+        <button
+          onClick={onExportChat}
+          className="rounded-lg p-2 hover:bg-gray-100"
+        >
+          <span className="sr-only">Export chat</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-6"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
       </div>
     </div>
   )

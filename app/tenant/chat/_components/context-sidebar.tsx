@@ -5,13 +5,16 @@ import {
   ConversationInsight,
   ContextWindow
 } from "@/types/ai-types"
+import { Message } from "@/types/chat-types"
 
 export interface ContextSidebarProps {
   isOpen: boolean
   onClose: () => void
   ticketSuggestion: TicketSuggestion | null
   insights: ConversationInsight[]
-  context: ContextWindow
+  context?: ContextWindow
+  messages: Message[]
+  onCreateTicket: () => Promise<void>
 }
 
 export default function ContextSidebar({
@@ -19,7 +22,9 @@ export default function ContextSidebar({
   onClose,
   ticketSuggestion,
   insights,
-  context
+  context,
+  messages,
+  onCreateTicket
 }: ContextSidebarProps) {
   if (!isOpen) return null
 
@@ -49,23 +54,30 @@ export default function ContextSidebar({
 
       <div className="mt-6 space-y-6">
         {/* Context Summary */}
-        <div>
-          <h3 className="font-medium">Summary</h3>
-          <p className="mt-2 text-sm text-gray-600">{context.summary}</p>
-        </div>
+        {context && (
+          <>
+            <div>
+              <h3 className="font-medium">Summary</h3>
+              <p className="mt-2 text-sm text-gray-600">{context.summary}</p>
+            </div>
 
-        {/* Long-term Memory */}
-        <div>
-          <h3 className="font-medium">Remembered Information</h3>
-          <div className="mt-2 space-y-2">
-            {context.longTerm.map((item, index) => (
-              <div key={index} className="rounded-lg bg-gray-50 p-3 text-sm">
-                <div className="font-medium">{item.key}</div>
-                <div className="mt-1 text-gray-600">{item.value}</div>
+            {/* Long-term Memory */}
+            <div>
+              <h3 className="font-medium">Remembered Information</h3>
+              <div className="mt-2 space-y-2">
+                {context.longTerm.map((item, index) => (
+                  <div
+                    key={index}
+                    className="rounded-lg bg-gray-50 p-3 text-sm"
+                  >
+                    <div className="font-medium">{item.key}</div>
+                    <div className="mt-1 text-gray-600">{item.value}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          </>
+        )}
 
         {/* Ticket Suggestion */}
         {ticketSuggestion && (
@@ -84,6 +96,12 @@ export default function ContextSidebar({
                   {ticketSuggestion.priority}
                 </span>
               </div>
+              <button
+                onClick={onCreateTicket}
+                className="mt-3 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Create Ticket
+              </button>
             </div>
           </div>
         )}

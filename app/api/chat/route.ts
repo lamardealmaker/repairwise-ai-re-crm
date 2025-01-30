@@ -1,21 +1,32 @@
 import { auth } from "@clerk/nextjs/server"
 import { OpenAIStream, StreamingTextResponse } from "ai"
 import { Configuration, OpenAIApi } from "openai-edge"
-import {
-  getRelevantContextAction,
-  updateContextAction
-} from "@/lib/ai/context-manager"
-import { Message } from "@/types/chat-types"
-import { db } from "@/db/db"
-import { eq } from "drizzle-orm"
-import { chatMessagesTable } from "@/db/schema"
-import type { ChatCompletionRequestMessage } from "openai"
+import { z } from "zod"
 
-const config = new Configuration({
+import {
+  getChatMessagesAction,
+  createChatMessageAction
+} from "@/actions/db/chat-actions"
+import { getContextAction } from "@/actions/context-actions"
+import { Message } from "@/types"
+
+const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-const openai = new OpenAIApi(config)
+const openai = new OpenAIApi(configuration)
+
+const requestSchema = z.object({
+  messages: z.array(
+    z.object({
+      id: z.string(),
+      content: z.string(),
+      role: z.enum(["user", "assistant", "system"]),
+      createdAt: z.string()
+    })
+  ),
+  sessionId: z.string().min(1, "Session ID is required")
+})
 
 export async function POST(req: Request) {
   try {
@@ -24,70 +35,118 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 })
     }
 
-    const { message, sessionId } = await req.json()
+    const json = await req.json()
+    const body = requestSchema.parse(json)
+    const { messages: clientMessages, sessionId } = body
 
-    // Get conversation context
-    const messages = await db.query.chatMessages.findMany({
-      where: eq(chatMessagesTable.sessionId, sessionId),
-      orderBy: (messages, { asc }) => [asc(messages.createdAt)]
+    console.log("API Request received:", {
+      sessionId,
+      userId: session.userId,
+      messageCount: clientMessages.length
     })
 
-    // Update context with the new message
-    const context = await updateContextAction({
-      id: "temp",
+    // Get the last message from the client
+    const lastMessage = clientMessages[clientMessages.length - 1]
+    if (!lastMessage || !lastMessage.content) {
+      return new Response("No message provided", { status: 400 })
+    }
+
+    console.log("Storing user message:", {
       sessionId,
-      content: message,
-      role: "user",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      content: lastMessage.content,
+      role: "user"
+    })
+
+    // Store the new user message
+    const userMessageResult = await createChatMessageAction({
+      sessionId,
+      content: lastMessage.content,
+      role: "user"
+    })
+
+    console.log("User message stored:", userMessageResult)
+
+    // Get previous messages from the database
+    const { data: dbMessages } = await getChatMessagesAction(sessionId)
+
+    console.log("Retrieved messages from DB:", {
+      sessionId,
+      messageCount: dbMessages?.length || 0
+    })
+
+    // Combine client messages with db messages, ensuring no duplicates
+    const allMessages = Array.from(
+      new Map(
+        [...(dbMessages || []), ...clientMessages].map(msg => [msg.id, msg])
+      ).values()
+    ).sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+
+    console.log("Combined messages:", {
+      sessionId,
+      totalMessages: allMessages.length,
+      fromDb: dbMessages?.length || 0,
+      fromClient: clientMessages.length,
+      afterDeduplication: allMessages.length
     })
 
     // Get relevant context
-    const relevantContext = await getRelevantContextAction()
-    const contextString = Array.from(relevantContext.entries())
-      .map(([key, value]) => `${key}: ${value.value}`)
-      .join("\n")
+    const { data: context } = await getContextAction()
+    const contextMessage = context?.summary
+      ? {
+          role: "system" as const,
+          content: context.summary
+        }
+      : null
 
-    // Create messages array for OpenAI
-    const aiMessages: ChatCompletionRequestMessage[] = [
-      {
-        role: "system",
-        content: `You are an AI assistant for a property management system. Help tenants with their inquiries and issues.
-        
-Current Context:
-${contextString}
-
-Guidelines:
-1. Use the provided context to give relevant responses
-2. If addressing property-specific issues, reference relevant details from context
-3. Be professional but friendly
-4. If suggesting a ticket, be clear about priority and category
-5. Keep responses concise but informative`
-      },
-      ...messages.map(msg => ({
-        role: msg.role === "assistant" ? "assistant" : "user",
+    // Prepare messages for OpenAI
+    const apiMessages = [
+      ...(contextMessage ? [contextMessage] : []),
+      ...allMessages.map(msg => ({
+        role: msg.role,
         content: msg.content
-      })),
-      {
-        role: "user",
-        content: message
-      }
+      }))
     ]
+
+    console.log("Sending to OpenAI:", {
+      sessionId,
+      messageCount: apiMessages.length,
+      hasContext: !!contextMessage
+    })
 
     const response = await openai.createChatCompletion({
       model: "gpt-4",
-      messages: aiMessages,
+      messages: apiMessages,
       temperature: 0.7,
       stream: true
     })
 
-    // Convert the response to a stream
-    const stream = OpenAIStream(response)
+    // Store the assistant's response
+    const stream = OpenAIStream(response, {
+      async onCompletion(completion) {
+        console.log("Storing assistant response:", {
+          sessionId,
+          contentPreview: completion.substring(0, 50)
+        })
 
-    // Return the stream
+        const result = await createChatMessageAction({
+          sessionId,
+          content: completion,
+          role: "assistant"
+        })
+
+        console.log("Assistant response stored:", result)
+      }
+    })
+
     return new StreamingTextResponse(stream)
   } catch (error) {
-    console.error("Error in chat API:", error)
-    return new Response("Internal Server Error", { status: 500 })
+    console.error("Chat API error:", error)
+    return new Response(
+      error instanceof Error ? error.message : "Internal Server Error",
+      { status: 500 }
+    )
   }
 }
