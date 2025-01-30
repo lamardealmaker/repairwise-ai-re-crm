@@ -20,7 +20,7 @@ export interface Message {
   id: string
   sessionId: string
   content: string
-  role: "user" | "assistant" | "system"
+  role: "user" | "assistant"
   createdAt: string
   updatedAt: string
   metadata?: Record<string, any>

@@ -6,7 +6,8 @@ import { Message } from "@/types/chat-types"
 import {
   ContextWindow,
   TicketSuggestion,
-  ConversationInsight
+  ConversationInsight,
+  TicketAnalysis
 } from "@/types/ai-types"
 import { sendMessageAction } from "@/actions/chat-actions"
 import {
@@ -18,6 +19,9 @@ import ChatHeader from "./_components/chat-header"
 import MessageThread from "./_components/message-thread"
 import MessageInput from "./_components/message-input"
 import ContextSidebar from "./_components/context-sidebar"
+import { createTicketFromAnalysis } from "@/actions/db/tickets-actions"
+import { toast } from "sonner"
+import { getUserPropertyIdAction } from "@/actions/db/user-roles-actions"
 
 const defaultSettings = {
   enableContext: true,
@@ -46,12 +50,28 @@ export default function ChatPage() {
   const [ticketSuggestion, setTicketSuggestion] =
     useState<TicketSuggestion | null>(null)
   const [insights, setInsights] = useState<ConversationInsight[]>([])
+  const [propertyId, setPropertyId] = useState<string | null>(null)
 
   useEffect(() => {
     if (messageStore) {
       initializeChat()
     }
   }, [messageStore])
+
+  useEffect(() => {
+    if (userId) {
+      loadPropertyId()
+    }
+  }, [userId])
+
+  const loadPropertyId = async () => {
+    if (!userId) return
+
+    const result = await getUserPropertyIdAction(userId)
+    if (result.isSuccess && result.data) {
+      setPropertyId(result.data)
+    }
+  }
 
   const initializeChat = async () => {
     if (!messageStore) return
@@ -179,12 +199,113 @@ export default function ChatPage() {
     }
   }
 
-  const handleCreateTicket = async (): Promise<void> => {
+  // Map AI suggested categories to valid database categories
+  function mapToValidCategory(
+    suggestedCategory: string
+  ): "maintenance" | "billing" | "noise_complaint" | "other" {
+    const category = suggestedCategory.toLowerCase()
+
+    if (
+      category.includes("plumbing") ||
+      category.includes("maintenance") ||
+      category.includes("repair") ||
+      category.includes("fix") ||
+      category.includes("broken")
+    ) {
+      return "maintenance"
+    }
+
+    if (
+      category.includes("billing") ||
+      category.includes("payment") ||
+      category.includes("rent") ||
+      category.includes("fee")
+    ) {
+      return "billing"
+    }
+
+    if (
+      category.includes("noise") ||
+      category.includes("complaint") ||
+      category.includes("disturbance")
+    ) {
+      return "noise_complaint"
+    }
+
+    return "other"
+  }
+
+  const handleCreateTicket = async () => {
+    console.log("=== Starting Ticket Creation ===")
+    console.log("Current thread:", currentThread)
+    console.log("Ticket suggestion:", JSON.stringify(ticketSuggestion, null, 2))
+    console.log("Property ID:", propertyId)
+    console.log("User ID:", userId)
+    console.log("Insights:", JSON.stringify(insights, null, 2))
+
+    if (!currentThread) {
+      console.error("❌ No current thread")
+      throw new Error("No current thread")
+    }
+
+    if (!ticketSuggestion) {
+      console.error("❌ No ticket suggestion")
+      throw new Error("No ticket suggestion")
+    }
+
+    if (!propertyId) {
+      console.error("❌ No property ID")
+      throw new Error("No property ID")
+    }
+
+    if (!userId) {
+      console.error("❌ No user ID")
+      throw new Error("No user ID")
+    }
+
     try {
-      // Implement ticket creation logic here
-      console.log("Creating ticket...")
+      const mappedCategory = mapToValidCategory(ticketSuggestion.category)
+      console.log("Original category:", ticketSuggestion.category)
+      console.log("Mapped category:", mappedCategory)
+
+      const analysis: TicketAnalysis = {
+        ticketSuggestion: {
+          title: ticketSuggestion.title,
+          summary: ticketSuggestion.summary,
+          category: mappedCategory,
+          priority: ticketSuggestion.priority,
+          confidence: ticketSuggestion.confidence,
+          relevantMessageIds: ticketSuggestion.relevantMessageIds
+        },
+        insights
+      }
+
+      console.log(
+        "Creating ticket with analysis:",
+        JSON.stringify(analysis, null, 2)
+      )
+      const result = await createTicketFromAnalysis(
+        currentThread,
+        analysis,
+        userId!,
+        propertyId
+      )
+
+      console.log("Create ticket result:", JSON.stringify(result, null, 2))
+
+      if (!result.isSuccess) {
+        console.error("❌ Failed to create ticket:", result.message)
+        throw new Error(result.message)
+      }
+
+      console.log("✅ Ticket created successfully")
+      toast.success("Ticket created successfully")
     } catch (error) {
-      console.error("Failed to create ticket:", error)
+      console.error("❌ Failed to create ticket:", error)
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create ticket"
+      )
+      throw error // Re-throw to be handled by the ContextSidebar
     }
   }
 
@@ -212,8 +333,8 @@ export default function ChatPage() {
 
         <MessageInput
           onSendMessage={handleSendMessage}
-          isTyping={isTyping}
           settings={defaultSettings}
+          isTyping={isTyping}
         />
       </div>
 

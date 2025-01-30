@@ -10,10 +10,13 @@ import {
   pgTable,
   text,
   timestamp,
-  uuid
+  uuid,
+  boolean,
+  decimal
 } from "drizzle-orm/pg-core"
 import { usersTable } from "./users-schema"
 import { propertiesTable } from "./properties-schema"
+import { chatSessionsTable } from "./chat-sessions-schema"
 
 export const ticketStatusEnum = pgEnum("ticket_status", [
   "open",
@@ -59,6 +62,9 @@ export const ticketsTable = pgTable("tickets", {
   resolutionDetails: text("resolution_details"),
   timeSpent: text("time_spent"),
   costIncurred: text("cost_incurred"),
+  chatSessionId: uuid("chat_session_id").references(() => chatSessionsTable.id),
+  aiGenerated: boolean("ai_generated").default(false).notNull(),
+  confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

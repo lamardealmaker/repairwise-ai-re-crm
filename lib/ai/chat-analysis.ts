@@ -21,6 +21,12 @@ For ticket suggestions:
 - Generate a title, priority (low/medium/high), category, and summary
 - Assign a confidence score (0-1) based on the clarity and urgency of the issue
 
+IMPORTANT: Only use these exact categories:
+- "maintenance" - for repairs, plumbing, HVAC, appliances, etc.
+- "billing" - for rent, fees, payments
+- "noise_complaint" - for noise disturbances
+- "other" - for anything else
+
 For insights:
 - Identify key patterns or important information
 - Categorize as "issue", "request", or "feedback"
@@ -32,7 +38,7 @@ Respond in the following JSON format:
   "ticketSuggestion": {
     "title": string,
     "priority": "low" | "medium" | "high",
-    "category": string,
+    "category": "maintenance" | "billing" | "noise_complaint" | "other",
     "summary": string,
     "confidence": number,
     "relevantMessageIds": string[]
@@ -46,6 +52,39 @@ Respond in the following JSON format:
     }
   ]
 }`
+
+// Add validation function
+function validateAnalysis(analysis: any): boolean {
+  const validCategories = ["maintenance", "billing", "noise_complaint", "other"]
+  const validPriorities = ["low", "medium", "high"]
+
+  if (!analysis) return false
+
+  // If there's no ticket suggestion, that's valid
+  if (!analysis.ticketSuggestion) return true
+
+  // Validate ticket suggestion
+  const suggestion = analysis.ticketSuggestion
+  if (
+    !suggestion.title ||
+    !suggestion.summary ||
+    !validCategories.includes(suggestion.category) ||
+    !validPriorities.includes(suggestion.priority) ||
+    typeof suggestion.confidence !== "number" ||
+    !Array.isArray(suggestion.relevantMessageIds)
+  ) {
+    console.error("Invalid ticket suggestion format:", suggestion)
+    return false
+  }
+
+  // Validate insights
+  if (!Array.isArray(analysis.insights)) {
+    console.error("Insights must be an array")
+    return false
+  }
+
+  return true
+}
 
 export async function analyzeConversation(messages: Message[]): Promise<{
   ticketSuggestion: TicketSuggestion | null
@@ -75,6 +114,16 @@ export async function analyzeConversation(messages: Message[]): Promise<{
     })
 
     const analysis = JSON.parse(completion.choices[0].message.content || "{}")
+
+    // Validate the analysis
+    if (!validateAnalysis(analysis)) {
+      console.error("Invalid analysis format:", analysis)
+      return {
+        ticketSuggestion: null,
+        insights: [],
+        context
+      }
+    }
 
     return {
       ticketSuggestion: analysis.ticketSuggestion,

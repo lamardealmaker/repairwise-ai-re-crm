@@ -59,7 +59,7 @@ export async function sendMessageAction(
         id: msg.id,
         sessionId: msg.sessionId,
         content: msg.content,
-        role: msg.role as "user" | "assistant" | "system",
+        role: msg.role as "user" | "assistant",
         createdAt: msg.createdAt.toISOString(),
         updatedAt: msg.updatedAt.toISOString()
       }))
@@ -79,18 +79,16 @@ export async function sendMessageAction(
 
     // Format conversation history for OpenAI
     const conversationHistory = allMessages.map(msg => ({
-      role: msg.role as "user" | "assistant" | "system",
+      role: msg.role,
       content: msg.content
     }))
 
-    // Add system message at the start if not present
-    const fullHistory = conversationHistory.length > 0 && conversationHistory[0].role === "system"
-      ? [...conversationHistory, { role: "user" as const, content }]
-      : [
-          { role: "system" as const, content: DEFAULT_SYSTEM_PROMPT },
-          ...conversationHistory,
-          { role: "user" as const, content }
-        ]
+    // Always add system message at the start
+    const fullHistory = [
+      { role: "system" as const, content: DEFAULT_SYSTEM_PROMPT },
+      ...conversationHistory,
+      { role: "user" as const, content }
+    ]
 
     console.log("Prepared conversation history:", {
       total: fullHistory.length,
@@ -124,30 +122,32 @@ export async function sendMessageAction(
 
     // Create message object with proper metadata
     const message: Message = {
-      id: crypto.randomUUID(),
       sessionId: sessionId || "current-session",
       content: aiMessage.content || "No response generated",
       role: "assistant",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      id: "temp"
     }
 
     // Save message to database if we have a session
     if (sessionId) {
       console.log("Saving AI message to database:", {
         sessionId,
-        messageId: message.id,
         contentPreview: message.content.slice(0, 50)
       })
 
-      await db.insert(chatMessagesTable).values({
-        id: message.id,
+      const result = await db.insert(chatMessagesTable).values({
         sessionId: message.sessionId,
         content: message.content,
         role: message.role,
-        createdAt: new Date(message.createdAt),
-        updatedAt: new Date(message.updatedAt)
-      })
+        metadata: {}
+      }).returning()
+
+      // Update message with generated ID and timestamps
+      message.id = result[0].id
+      message.createdAt = result[0].createdAt.toISOString()
+      message.updatedAt = result[0].updatedAt.toISOString()
     }
 
     // Add the new messages to the history for analysis

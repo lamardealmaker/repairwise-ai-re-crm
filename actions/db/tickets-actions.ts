@@ -7,6 +7,7 @@ import { and, eq, desc } from "drizzle-orm"
 import { userRolesTable, propertiesTable } from "@/db/schema"
 import { inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { TicketAnalysis } from "@/types/ai-types"
 
 export async function createTicketAction(
   ticket: InsertTicket
@@ -402,6 +403,48 @@ export async function getTicketsForUserAction(
       message: error instanceof Error 
         ? `Database error: ${error.message}`
         : "Failed to get tickets" 
+    }
+  }
+}
+
+export async function createTicketFromAnalysis(
+  sessionId: string,
+  analysis: TicketAnalysis,
+  userId: string,
+  propertyId: string
+): Promise<ActionState<SelectTicket>> {
+  try {
+    if (!analysis.ticketSuggestion) {
+      return {
+        isSuccess: false,
+        message: "No ticket suggestion in analysis"
+      }
+    }
+
+    const ticket: InsertTicket = {
+      id: crypto.randomUUID(),
+      tenantId: userId,
+      propertyId,
+      title: analysis.ticketSuggestion.title,
+      description: analysis.ticketSuggestion.summary,
+      category: analysis.ticketSuggestion.category,
+      priority: analysis.ticketSuggestion.priority,
+      status: "open",
+      chatSessionId: sessionId,
+      aiGenerated: true,
+      confidenceScore: analysis.ticketSuggestion.confidence.toString(),
+      chatHistory: {
+        relevantMessageIds: analysis.ticketSuggestion.relevantMessageIds,
+        insights: analysis.insights
+      }
+    }
+
+    return await createTicketAction(ticket)
+  } catch (error) {
+    console.error("Failed to create ticket from analysis:", error)
+    return {
+      isSuccess: false,
+      message: "Failed to create ticket"
     }
   }
 } 

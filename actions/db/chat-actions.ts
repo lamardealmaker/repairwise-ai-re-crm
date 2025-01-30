@@ -18,8 +18,9 @@ import {
   SelectChatContext
 } from "@/db/schema"
 import { ActionState } from "@/types"
-import { eq, desc, sql } from "drizzle-orm"
+import { eq, desc, sql, and, gte } from "drizzle-orm"
 import { ContextWindow } from "@/types/ai-types"
+import { SerializedContextWindow } from "@/lib/utils/context-utils"
 
 interface CreateChatSessionParams {
   userId: string
@@ -39,6 +40,23 @@ interface CreateChatAttachmentParams {
   url: string
   size: number
   metadata: string | null
+}
+
+// Helper function to find duplicate messages
+async function findExistingMessage(params: InsertChatMessage): Promise<SelectChatMessage | null> {
+  const fiveSecondsAgo = new Date(Date.now() - 5000);
+  
+  const [existing] = await db
+    .select()
+    .from(chatMessagesTable)
+    .where(and(
+      eq(chatMessagesTable.sessionId, params.sessionId),
+      eq(chatMessagesTable.content, params.content),
+      gte(chatMessagesTable.createdAt, fiveSecondsAgo)
+    ))
+    .limit(1);
+    
+  return existing || null;
 }
 
 // Chat Sessions
@@ -102,6 +120,25 @@ export async function createChatMessageAction(
 ): Promise<ActionState<SelectChatMessage>> {
   try {
     console.log("Creating chat message:", params)
+
+    // Check for existing duplicate message
+    const existingMessage = await findExistingMessage({
+      sessionId: params.sessionId,
+      content: params.content,
+      role: params.role,
+      metadata: {}
+    });
+
+    if (existingMessage) {
+      console.log("Found duplicate message, returning existing:", existingMessage)
+      return {
+        isSuccess: true,
+        message: "Using existing message",
+        data: existingMessage
+      }
+    }
+
+    // Create new message if no duplicate found
     const [message] = await db
       .insert(chatMessagesTable)
       .values({
@@ -232,69 +269,86 @@ export async function updateChatTicketAction(
 // Chat Context
 export async function updateChatContextAction(
   sessionId: string,
-  context: Partial<ContextWindow>
-): Promise<ActionState<SelectChatContext>> {
+  context: SerializedContextWindow
+): Promise<ActionState<void>> {
   try {
-    console.log("Updating chat context:", { 
-      sessionId, 
-      context: {
-        shortTerm: context.shortTerm ? JSON.stringify(context.shortTerm) : undefined,
-        longTerm: context.longTerm ? JSON.stringify(context.longTerm) : undefined,
-        metadata: context.metadata,
-        summary: context.summary
-      }
-    })
-    
-    // First try to get existing context
-    const [existingContext] = await db
-      .select()
-      .from(chatContextTable)
-      .where(eq(chatContextTable.sessionId, sessionId))
-    
-    if (existingContext) {
-      // Update existing context
-      const [updatedContext] = await db
-        .update(chatContextTable)
-        .set({
-          shortTerm: context.shortTerm ? sql`${JSON.stringify(context.shortTerm)}::jsonb` : undefined,
-          longTerm: context.longTerm ? sql`${JSON.stringify(context.longTerm)}::jsonb` : undefined,
-          metadata: context.metadata ? sql`${JSON.stringify(context.metadata)}::jsonb` : undefined,
-          summary: context.summary
-        })
-        .where(eq(chatContextTable.sessionId, sessionId))
-        .returning()
+    await db
+      .update(chatSessionsTable)
+      .set({
+        metadata: context,
+        updatedAt: new Date()
+      })
+      .where(eq(chatSessionsTable.id, sessionId))
 
-      console.log("Updated existing chat context:", updatedContext)
-      return {
-        isSuccess: true,
-        message: "Chat context updated successfully",
-        data: updatedContext
-      }
-    } else {
-      // Create new context with proper typing
-      const [newContext] = await db
-        .insert(chatContextTable)
-        .values({
-          sessionId,
-          shortTerm: sql`${JSON.stringify(context.shortTerm || [])}::jsonb`,
-          longTerm: sql`${JSON.stringify(context.longTerm || [])}::jsonb`,
-          metadata: sql`${JSON.stringify(context.metadata || {})}::jsonb`,
-          summary: context.summary
-        })
-        .returning()
-
-      console.log("Created new chat context:", newContext)
-      return {
-        isSuccess: true,
-        message: "Chat context created successfully",
-        data: newContext
-      }
+    return {
+      isSuccess: true,
+      message: "Chat context updated successfully",
+      data: undefined
     }
   } catch (error) {
     console.error("Error updating chat context:", error)
     return {
       isSuccess: false,
-      message: error instanceof Error ? error.message : "Failed to update chat context"
+      message: "Failed to update chat context"
     }
+  }
+}
+
+// Session validation and recovery
+export async function validateChatSessionAction(
+  sessionId: string,
+  userId: string
+): Promise<ActionState<boolean>> {
+  try {
+    const [session] = await db
+      .select()
+      .from(chatSessionsTable)
+      .where(eq(chatSessionsTable.id, sessionId))
+      .limit(1);
+
+    const isValid = !!session && session.userId === userId;
+
+    return {
+      isSuccess: true,
+      message: "Session validation completed",
+      data: isValid
+    };
+  } catch (error) {
+    console.error("Error validating chat session:", error);
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to validate chat session"
+    };
+  }
+}
+
+export async function getChatSessionAction(
+  sessionId: string
+): Promise<ActionState<SelectChatSession>> {
+  try {
+    const [session] = await db
+      .select()
+      .from(chatSessionsTable)
+      .where(eq(chatSessionsTable.id, sessionId))
+      .limit(1);
+
+    if (!session) {
+      return {
+        isSuccess: false,
+        message: "Session not found"
+      };
+    }
+
+    return {
+      isSuccess: true,
+      message: "Session retrieved successfully",
+      data: session
+    };
+  } catch (error) {
+    console.error("Error getting chat session:", error);
+    return {
+      isSuccess: false,
+      message: error instanceof Error ? error.message : "Failed to get chat session"
+    };
   }
 } 

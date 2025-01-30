@@ -6,6 +6,8 @@ import {
   ContextWindow
 } from "@/types/ai-types"
 import { Message } from "@/types/chat-types"
+import { toast } from "sonner"
+import { useState } from "react"
 
 export interface ContextSidebarProps {
   isOpen: boolean
@@ -26,6 +28,29 @@ export default function ContextSidebar({
   messages,
   onCreateTicket
 }: ContextSidebarProps) {
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleCreateTicket = async () => {
+    console.log("ContextSidebar: handleCreateTicket called")
+    try {
+      setIsCreatingTicket(true)
+      setError(null)
+      console.log("ContextSidebar: Calling onCreateTicket")
+      await onCreateTicket()
+      console.log("ContextSidebar: Ticket created successfully")
+      toast.success("Ticket created successfully")
+    } catch (error) {
+      console.error("ContextSidebar: Error creating ticket:", error)
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create ticket"
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsCreatingTicket(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -97,11 +122,15 @@ export default function ContextSidebar({
                 </span>
               </div>
               <button
-                onClick={onCreateTicket}
-                className="mt-3 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                onClick={handleCreateTicket}
+                disabled={isCreatingTicket}
+                className="mt-3 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Create Ticket
+                {isCreatingTicket ? "Creating..." : "Create Ticket"}
               </button>
+              {error && (
+                <div className="mt-2 text-sm text-red-600">{error}</div>
+              )}
             </div>
           </div>
         )}

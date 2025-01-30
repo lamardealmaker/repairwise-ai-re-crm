@@ -312,4 +312,39 @@ export async function updateUserRoleAndInfoAction(
     console.error("Error updating user role and info:", error)
     return { isSuccess: false, message: "Failed to update user role and info" }
   }
+}
+
+export async function getUserPropertyIdAction(
+  userId: string
+): Promise<ActionState<string | undefined>> {
+  try {
+    const [userRole] = await db
+      .select({
+        propertyId: userRolesTable.propertyId
+      })
+      .from(userRolesTable)
+      .where(
+        and(
+          eq(userRolesTable.userId, userId),
+          eq(userRolesTable.role, "TENANT")
+        )
+      )
+      .limit(1)
+
+    if (!userRole?.propertyId) {
+      return {
+        isSuccess: false,
+        message: "No property found for user"
+      }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Property ID retrieved successfully",
+      data: userRole.propertyId
+    }
+  } catch (error) {
+    console.error("Error getting user property:", error)
+    return { isSuccess: false, message: "Failed to get user property" }
+  }
 } 

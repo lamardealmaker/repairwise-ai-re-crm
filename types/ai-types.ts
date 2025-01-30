@@ -1,14 +1,49 @@
 import { Message } from "./chat-types"
+import { TicketCategory, TicketPriority } from "./shared-enums"
+import { AnalysisError } from "./error-types"
 
+export interface ConfidenceScore {
+  value: number
+  threshold: {
+    suggest: 0.8 // Minimum score to suggest ticket
+    autoCreate: 0.95 // Minimum score for automatic creation
+  }
+}
+
+export interface TicketAnalysis {
+  ticketSuggestion: {
+    title: string
+    priority: TicketPriority
+    category: TicketCategory
+    summary: string
+    confidence: number
+    relevantMessageIds: string[]
+  } | null
+  insights: Array<{
+    type: "issue" | "request" | "feedback"
+    content: string
+    confidence: number
+    context?: string
+  }>
+}
+
+export interface AnalysisResult {
+  isSuccess: boolean
+  analysis: TicketAnalysis | null
+  error?: AnalysisError
+}
+
+/** @deprecated Use TicketAnalysis instead */
 export interface TicketSuggestion {
   title: string
-  priority: "low" | "medium" | "high"
-  category: string
+  priority: TicketPriority
+  category: TicketCategory
   summary: string
   confidence: number
   relevantMessageIds: string[]
 }
 
+/** @deprecated Use TicketAnalysis['insights'] instead */
 export interface ConversationInsight {
   type: "issue" | "request" | "feedback"
   content: string
@@ -52,9 +87,9 @@ export interface ConversationContext {
 }
 
 export interface ContextScore {
-  relevance: number // 0-1 score of how relevant this context is
-  recency: number // 0-1 score based on how recent this context is
-  importance: number // 0-1 score of importance
+  relevance: number
+  recency: number
+  importance: number
 }
 
 export interface ContextMetadata {
