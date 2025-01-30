@@ -1,13 +1,14 @@
 "use server"
 
 import { Message } from "@/types/chat-types"
-import { TicketSuggestion, ConversationInsight, AIConfig } from "@/types/ai-types"
+import { TicketSuggestion, ConversationInsight, AIConfig, ContextItem } from "@/types/ai-types"
 import { ActionState } from "@/types"
 import OpenAI from "openai"
 import { analyzeConversation } from "@/lib/ai/chat-analysis"
 import { db } from "@/db/db"
 import { chatMessagesTable, chatSessionsTable } from "@/db/schema"
 import { eq } from "drizzle-orm"
+import { getContextAction } from "@/actions/context-actions"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -21,8 +22,29 @@ interface SendMessageResponse {
 
 const DEFAULT_SYSTEM_PROMPT = `You are an AI assistant for a property management system. 
 You help tenants with their inquiries, maintenance requests, and other property-related matters.
-Be professional, helpful, and concise in your responses.
-If you detect any maintenance issues or important requests, note them for potential ticket creation.`
+Be professional, helpful, and concise in your responses. Respond to the user in natural language. Don't respond with confidence levels or percentages or different things that wouldn't make that much sense to the user. Some of this information is just for your internal use only, and you can translate it into simple, digestible, short information that the user can understand. 
+
+Important Guidelines:
+1. Consider the ENTIRE conversation history when responding
+2. Maintain context from previous messages
+3. Reference previous issues or requests when relevant
+4. If a tenant mentions a previous issue, acknowledge it
+5. Track the progression of issues over time
+6. If an issue has been mentioned before, note its history
+7. Provide consistent advice across the conversation
+
+If you detect any maintenance issues or important requests:
+1. Note them for potential ticket creation
+2. Track if they've been mentioned before
+3. Monitor if they're getting worse
+4. Note any attempted solutions
+5. Consider their impact on the tenant
+
+Categories for issues:
+- "maintenance" - repairs, plumbing, HVAC, appliances, etc.
+- "billing" - rent, fees, payments
+- "noise_complaint" - noise disturbances
+- "other" - anything else not covered above`
 
 export async function sendMessageAction(
   content: string,
@@ -70,12 +92,48 @@ export async function sendMessageAction(
       index === self.findIndex(m => m.id === msg.id)
     )
 
-    console.log("Combined messages:", {
-      total: allMessages.length,
-      fromDb: existingMessages.length,
-      fromMemory: messages.length,
-      afterDeduplication: allMessages.length
-    })
+    // Add the new user message to the history for analysis
+    const userMessage = {
+      id: crypto.randomUUID(),
+      sessionId: sessionId || "current-session",
+      content,
+      role: "user" as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    const messagesForAnalysis = [...allMessages, userMessage]
+
+    // First, analyze the conversation to get insights and ticket suggestions
+    console.log("Analyzing conversation for insights and suggestions...")
+    const analysis = await analyzeConversation(messagesForAnalysis)
+
+    // Get the conversation context
+    const contextResult = await getContextAction()
+    const context = contextResult.isSuccess ? contextResult.data : null
+
+    // Create a comprehensive context summary including insights and ticket suggestions
+    const contextSummary = `
+Current Context:
+${context?.summary || "No context available"}
+
+Long-term Information:
+${context?.longTerm.map((item: ContextItem) => `- ${item.key}: ${item.value}`).join("\n") || "No long-term information"}
+
+Current Conversation Analysis:
+${analysis.insights.map(insight => 
+  `- ${insight.type.toUpperCase()}: ${insight.content} (Confidence: ${Math.round(insight.confidence * 100)}%)`
+).join("\n")}
+
+${analysis.ticketSuggestion ? `
+Active Ticket Suggestion:
+- Title: ${analysis.ticketSuggestion.title}
+- Category: ${analysis.ticketSuggestion.category}
+- Priority: ${analysis.ticketSuggestion.priority}
+- Summary: ${analysis.ticketSuggestion.summary}
+- Confidence: ${Math.round(analysis.ticketSuggestion.confidence * 100)}%
+` : "No active ticket suggestions"}
+`
 
     // Format conversation history for OpenAI
     const conversationHistory = allMessages.map(msg => ({
@@ -83,9 +141,12 @@ export async function sendMessageAction(
       content: msg.content
     }))
 
-    // Always add system message at the start
+    // Always add system message at the start with the enhanced context
     const fullHistory = [
-      { role: "system" as const, content: DEFAULT_SYSTEM_PROMPT },
+      { 
+        role: "system" as const, 
+        content: `${DEFAULT_SYSTEM_PROMPT}\n\n${contextSummary}` 
+      },
       ...conversationHistory,
       { role: "user" as const, content }
     ]
@@ -93,15 +154,10 @@ export async function sendMessageAction(
     console.log("Prepared conversation history:", {
       total: fullHistory.length,
       hasSystemPrompt: fullHistory[0].role === "system",
+      hasContext: !!contextSummary,
+      hasInsights: analysis.insights.length > 0,
+      hasTicketSuggestion: !!analysis.ticketSuggestion,
       messageSequence: fullHistory.map(m => ({ role: m.role, preview: m.content.slice(0, 30) }))
-    })
-
-    // Log the conversation history being sent
-    console.log("Sending conversation to OpenAI:", {
-      messageCount: fullHistory.length,
-      systemPrompt: fullHistory[0].content,
-      lastMessages: fullHistory.slice(-3).map(m => ({ role: m.role, preview: m.content.slice(0, 50) })),
-      totalHistory: fullHistory.length
     })
 
     // Get completion from OpenAI with full context
@@ -149,21 +205,6 @@ export async function sendMessageAction(
       message.createdAt = result[0].createdAt.toISOString()
       message.updatedAt = result[0].updatedAt.toISOString()
     }
-
-    // Add the new messages to the history for analysis
-    const updatedMessages = [...allMessages, message]
-
-    console.log("Final message state:", {
-      totalMessages: updatedMessages.length,
-      sequence: updatedMessages.map(m => ({
-        role: m.role,
-        preview: m.content.slice(0, 30),
-        id: m.id
-      }))
-    })
-
-    // Analyze conversation for insights and ticket suggestions
-    const analysis = await analyzeConversation(updatedMessages)
 
     return {
       isSuccess: true,

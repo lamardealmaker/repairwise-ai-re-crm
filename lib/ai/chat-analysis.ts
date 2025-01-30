@@ -17,9 +17,12 @@ const ANALYSIS_PROMPT = `Analyze the following conversation between a tenant and
 Extract key information and generate insights.
 
 For ticket suggestions:
-- Identify if there's a maintenance issue or important request that needs attention
-- Generate a title, priority (low/medium/high), category, and summary
-- Assign a confidence score (0-1) based on the clarity and urgency of the issue
+- Consider the ENTIRE conversation history, not just the latest message
+- Look for patterns and recurring issues across multiple messages
+- Identify maintenance issues or important requests that need attention
+- Generate a title, priority, and category based on the full context
+- Assign a confidence score (0-1) based on the overall clarity and urgency
+- Include relevant message IDs from throughout the conversation
 
 IMPORTANT: Only use these exact categories:
 - "maintenance" - for repairs, plumbing, HVAC, appliances, etc.
@@ -28,10 +31,19 @@ IMPORTANT: Only use these exact categories:
 - "other" - for anything else
 
 For insights:
-- Identify key patterns or important information
-- Categorize as "issue", "request", or "feedback"
-- Include relevant context from the conversation
-- Assign a confidence score (0-1)
+- Analyze the complete conversation flow
+- Identify recurring themes or escalating issues
+- Track issue progression and any attempted solutions
+- Note any changes in urgency or tenant satisfaction
+- Include relevant context from multiple messages
+- Assign confidence scores based on pattern strength
+
+Consider these aspects:
+1. Issue History: Has this been mentioned before?
+2. Urgency Progression: Has the issue become more urgent?
+3. Solution Attempts: What has been tried?
+4. Impact: How is this affecting the tenant?
+5. Related Issues: Are there connected problems?
 
 Respond in the following JSON format:
 {
@@ -92,16 +104,28 @@ export async function analyzeConversation(messages: Message[]): Promise<{
   context: ContextWindow
 }> {
   try {
-    // Update context with latest message
-    const latestMessage = messages[messages.length - 1]
-    const context = await updateContextAction(latestMessage)
+    // Get the full context window
+    const context = await getContextAction()
 
-    // Format conversation for analysis
-    const conversationText = messages
-      .map(m => `${m.role.toUpperCase()}: ${m.content}`)
-      .join("\n")
+    // Combine short-term and long-term context
+    const contextSummary = `
+      Short-term Context: ${context.shortTerm.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}
+      
+      Long-term Context: ${context.longTerm.map(item => `${item.key}: ${item.value}`).join("\n")}
+      
+      Summary: ${context.summary}
+    `
 
-    // Get AI analysis
+    // Format the complete conversation with context
+    const conversationText = `
+      Context Information:
+      ${contextSummary}
+      
+      Current Conversation:
+      ${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n")}
+    `
+
+    // Get AI analysis with full context
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-2024-08-06",
       messages: [
@@ -125,10 +149,22 @@ export async function analyzeConversation(messages: Message[]): Promise<{
       }
     }
 
+    // Update context with new insights
+    const updatedContext: ContextWindow = {
+      ...context,
+      summary:
+        context.summary +
+        "\n" +
+        analysis.insights.map((i: ConversationInsight) => i.content).join("\n")
+    }
+
+    // Update context in database
+    await updateContextAction(messages[messages.length - 1])
+
     return {
       ticketSuggestion: analysis.ticketSuggestion,
       insights: analysis.insights || [],
-      context
+      context: updatedContext
     }
   } catch (error) {
     console.error("Error analyzing conversation:", error)
