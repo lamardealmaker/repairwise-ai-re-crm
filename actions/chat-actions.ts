@@ -8,7 +8,7 @@ import { analyzeConversation } from "@/lib/ai/chat-analysis"
 import { db } from "@/db/db"
 import { chatMessagesTable, chatSessionsTable } from "@/db/schema"
 import { eq } from "drizzle-orm"
-import { getContextAction } from "@/actions/context-actions"
+import { getContextAction, updateContextAction, clearContextAction } from "@/lib/ai/context-manager"
 
 const DEFAULT_SYSTEM_PROMPT = `You are an AI assistant for a property management system. 
 You help tenants with their inquiries, maintenance requests, and other property-related matters.
@@ -53,7 +53,7 @@ export const sendMessageAction = withTracing(
       const sessionId = messages[0]?.sessionId || crypto.randomUUID()
 
       // Get context
-      const { data: context } = await getContextAction()
+      const context = await getContextAction()
       const contextSummary = context?.summary || ""
 
       // Analyze conversation for insights and ticket suggestions
@@ -85,7 +85,23 @@ export const sendMessageAction = withTracing(
       // Get completion from OpenAI with full context
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-2024-08-06",
-        messages: fullHistory,
+        messages: [
+          { 
+            role: "system" as const, 
+            content: `${DEFAULT_SYSTEM_PROMPT}
+            
+Current Context:
+${contextSummary}
+
+Recent Ticket Suggestions:
+${context?.ticketSuggestions?.map((t: TicketSuggestion) => `- ${t.title} (${t.category}): ${t.summary}`).join('\n') || 'None'}
+
+Recent Insights:
+${context?.insights?.map((i: ConversationInsight) => `- ${i.content}`).join('\n') || 'None'}` 
+          },
+          ...conversationHistory,
+          { role: "user" as const, content }
+        ],
         temperature: 0.7,
         max_tokens: 500
       })
@@ -98,6 +114,9 @@ export const sendMessageAction = withTracing(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }
+
+      // Update context with new message and analysis
+      await updateContextAction(aiMessage, analysis.ticketSuggestion || null, analysis.insights || [])
 
       return {
         isSuccess: true,
@@ -117,4 +136,29 @@ export const sendMessageAction = withTracing(
     }
   },
   { runType: "chain", name: "send_message" }
+)
+
+export const startNewChatAction = withTracing(
+  async function startNewChatAction(): Promise<ActionState<{ sessionId: string }>> {
+    try {
+      // Clear existing context
+      await clearContextAction()
+      
+      // Generate new session ID
+      const sessionId = crypto.randomUUID()
+      
+      return {
+        isSuccess: true,
+        message: "New chat session started",
+        data: { sessionId }
+      }
+    } catch (error) {
+      console.error("Error starting new chat:", error)
+      return {
+        isSuccess: false,
+        message: error instanceof Error ? error.message : "Failed to start new chat"
+      }
+    }
+  },
+  { runType: "chain", name: "start_new_chat" }
 ) 

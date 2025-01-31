@@ -29,7 +29,9 @@ let contextWindow: ContextWindow = {
   shortTerm: [],
   longTerm: [],
   metadata: {},
-  summary: ""
+  summary: "",
+  ticketSuggestions: [], // Store recent ticket suggestions
+  insights: [] // Store recent insights
 }
 
 function calculateContextScore(item: ContextItem): ContextScore {
@@ -147,14 +149,50 @@ function generateContextSummary(): string {
 }
 
 export async function updateContextAction(
-  message: Message
+  message: Message,
+  ticketSuggestion?: TicketSuggestion | null,
+  insights?: ConversationInsight[]
 ): Promise<ContextWindow> {
   // Update memories
   updateShortTermMemory(message)
   await updateLongTermMemory(message)
 
-  // Update summary
-  contextWindow.summary = generateContextSummary()
+  // Update ticket suggestions and insights if provided
+  if (ticketSuggestion) {
+    contextWindow.ticketSuggestions = [
+      ticketSuggestion,
+      ...contextWindow.ticketSuggestions
+    ].slice(0, 5) // Keep last 5 suggestions
+  }
+
+  if (insights && insights.length > 0) {
+    contextWindow.insights = [...insights, ...contextWindow.insights].slice(
+      0,
+      10
+    ) // Keep last 10 insights
+  }
+
+  // Update summary with ticket and insight information
+  const ticketSummary =
+    contextWindow.ticketSuggestions.length > 0
+      ? `Recent Ticket: ${contextWindow.ticketSuggestions[0].title} (${contextWindow.ticketSuggestions[0].category}) - ${contextWindow.ticketSuggestions[0].summary}`
+      : ""
+
+  const insightSummary =
+    contextWindow.insights.length > 0
+      ? `Recent Insights: ${contextWindow.insights
+          .slice(0, 3)
+          .map(i => i.content)
+          .join(" | ")}`
+      : ""
+
+  // Generate base summary
+  const baseSummary = generateContextSummary()
+
+  // Combine all summaries
+  contextWindow.summary = [baseSummary, ticketSummary, insightSummary]
+    .filter(Boolean)
+    .join("\n\n")
 
   return contextWindow
 }
@@ -168,6 +206,8 @@ export async function clearContextAction(): Promise<void> {
     shortTerm: [],
     longTerm: [],
     metadata: {},
-    summary: ""
+    summary: "",
+    ticketSuggestions: [],
+    insights: []
   }
 }

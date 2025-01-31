@@ -17,6 +17,9 @@ import TypingIndicator from "./typing-indicator"
 import FeedbackToast from "./feedback-toast"
 import ChatHeader from "./chat-header"
 import ContextSidebar from "./context-sidebar"
+import { PlusCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { startNewChatAction } from "@/actions/chat-actions"
 
 interface FeedbackState {
   message: string
@@ -50,7 +53,7 @@ export default function ChatInterface({
   initialMessages = []
 }: ChatInterfaceProps) {
   // Generate a session ID if not provided
-  const [sessionId] = useState<string>(() => {
+  const [sessionId, setSessionId] = useState<string>(() => {
     const newSessionId = initialSessionId || crypto.randomUUID()
     console.log("Initializing chat with session ID:", newSessionId)
     return newSessionId
@@ -59,6 +62,7 @@ export default function ChatInterface({
   const [feedback, setFeedback] = useState<FeedbackState | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [settings, setSettings] = useState<ChatSettings>(defaultSettings)
+  const [messages, setMessages] = useState<Message[]>(initialMessages)
 
   // Initialize chat session
   useEffect(() => {
@@ -106,7 +110,7 @@ export default function ChatInterface({
     })),
     body: {
       sessionId,
-      messages: initialMessages
+      messages
     },
     onResponse: response => {
       console.log("Chat response received:", {
@@ -130,11 +134,12 @@ export default function ChatInterface({
   })
 
   // Convert ai/react messages to our Message type
-  const messages: Message[] = aiMessages.map(msg => ({
+  const convertedMessages: Message[] = aiMessages.map(msg => ({
     id: msg.id,
     sessionId,
     content: msg.content,
-    role: msg.role as "user" | "assistant" | "system",
+    role:
+      msg.role === "system" ? "assistant" : (msg.role as "user" | "assistant"),
     createdAt: (msg.createdAt || new Date()).toISOString(),
     updatedAt: (msg.createdAt || new Date()).toISOString()
   }))
@@ -243,24 +248,63 @@ export default function ChatInterface({
     }
   }
 
+  const handleNewChat = async () => {
+    const result = await startNewChatAction()
+    if (result.isSuccess) {
+      // Clear messages and use new session ID
+      setInput("")
+      setSessionId(result.data.sessionId)
+
+      // Create new chat session in DB
+      const sessionResult = await createChatSessionAction({
+        userId,
+        title: "New Chat"
+      })
+
+      if (!sessionResult.isSuccess) {
+        setFeedback({
+          type: "error",
+          message: "Failed to initialize new chat"
+        })
+      }
+    } else {
+      setFeedback({
+        type: "error",
+        message: "Failed to start new chat"
+      })
+    }
+  }
+
   return (
     <div className="flex h-full">
-      <div className="flex h-full flex-1 flex-col">
+      <div className="relative flex h-full flex-1 flex-col">
         <ChatHeader
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onClearHistory={async () => {
-            const newSessionId = crypto.randomUUID()
-            window.location.href = `/tenant/chat?session=${newSessionId}`
-            return newSessionId
+            const result = await startNewChatAction()
+            if (result.isSuccess) {
+              setSessionId(result.data.sessionId)
+              return result.data.sessionId
+            }
+            return sessionId
           }}
           onExportChat={handleExportChat}
           settings={settings}
           onSettingsChange={handleSettingsChange}
-          context={undefined}
         />
 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleNewChat}
+          className="absolute right-4 top-4 z-10"
+          title="Start New Chat"
+        >
+          <PlusCircle className="size-5" />
+        </Button>
+
         <MessageThread
-          messages={messages}
+          messages={convertedMessages}
           settings={settings}
           isTyping={isAiLoading}
         />

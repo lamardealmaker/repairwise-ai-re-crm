@@ -113,4 +113,6 @@ export interface ContextWindow {
   longTerm: ContextItem[]
   metadata: Record<string, any>
   summary: string
+  ticketSuggestions: TicketSuggestion[]
+  insights: ConversationInsight[]
 }

@@ -9,7 +9,7 @@ import {
   ConversationInsight,
   TicketAnalysis
 } from "@/types/ai-types"
-import { sendMessageAction } from "@/actions/chat-actions"
+import { sendMessageAction, startNewChatAction } from "@/actions/chat-actions"
 import {
   getContextAction,
   updateContextAction
@@ -22,6 +22,8 @@ import ContextSidebar from "./_components/context-sidebar"
 import { createTicketFromAnalysis } from "@/actions/db/tickets-actions"
 import { toast } from "sonner"
 import { getUserPropertyIdAction } from "@/actions/db/user-roles-actions"
+import { PlusCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const defaultSettings = {
   enableContext: true,
@@ -45,7 +47,9 @@ export default function ChatPage() {
     shortTerm: [],
     longTerm: [],
     metadata: {},
-    summary: ""
+    summary: "",
+    ticketSuggestions: [],
+    insights: []
   })
   const [ticketSuggestion, setTicketSuggestion] =
     useState<TicketSuggestion | null>(null)
@@ -160,7 +164,9 @@ export default function ChatPage() {
         shortTerm: [],
         longTerm: [],
         metadata: {},
-        summary: ""
+        summary: "",
+        ticketSuggestions: [],
+        insights: []
       })
       setTicketSuggestion(null)
       setInsights([])
@@ -309,6 +315,30 @@ export default function ChatPage() {
     }
   }
 
+  const handleNewChat = async () => {
+    try {
+      const result = await startNewChatAction()
+      if (result.isSuccess) {
+        const newThreadId = await messageStore?.createThread()
+        if (newThreadId) {
+          setCurrentThread(newThreadId)
+          setContext({
+            shortTerm: [],
+            longTerm: [],
+            metadata: {},
+            summary: "",
+            ticketSuggestions: [],
+            insights: []
+          })
+          setTicketSuggestion(null)
+          setInsights([])
+        }
+      }
+    } catch (error) {
+      console.error("Failed to start new chat:", error)
+    }
+  }
+
   const currentThreadData = currentThread
     ? messageStore?.getThread(currentThread)
     : null
@@ -316,14 +346,24 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen">
       <div className="flex flex-1 flex-col">
-        <ChatHeader
-          onOpenSidebar={() => setIsSidebarOpen(true)}
-          onClearHistory={handleClearHistory}
-          onExportChat={handleExportChat}
-          settings={defaultSettings}
-          onSettingsChange={() => {}}
-          context={context}
-        />
+        <div className="relative">
+          <ChatHeader
+            onOpenSidebar={() => setIsSidebarOpen(true)}
+            settings={defaultSettings}
+            onSettingsChange={() => {}}
+            context={context}
+          />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNewChat}
+            className="absolute right-4 top-4 z-10"
+            title="Start New Chat"
+          >
+            <PlusCircle className="size-5" />
+          </Button>
+        </div>
 
         <MessageThread
           messages={currentThreadData?.messages || []}
